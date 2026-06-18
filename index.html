@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>출결 확인 달력</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<style>
+  :root{
+    --paper:#EDF0F5; --surface:#FFFFFF; --surface-2:#F6F8FC;
+    --ink:#16202B; --ink-2:#5A6678; --line:#E3E8F0; --line-2:#EDF1F7;
+    --accent:#3457D5; --accent-weak:#E7EBFB;
+    --done:#15924E; --done-bg:#EDF7F1; --ghost:#AEB7C4; --warn:#C2410C;
+    --club:#6D4AC4; --club-bg:#EFEAFB; --self:#C2410C; --self-bg:#FCEFE3;
+    --shadow:0 1px 2px rgba(20,32,43,.04), 0 8px 24px rgba(20,32,43,.05);
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{font-family:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+    background:var(--paper); color:var(--ink); -webkit-font-smoothing:antialiased; line-height:1.5}
+  .wrap{max-width:1120px; margin:0 auto; padding:0 14px 80px}
+
+  header.app{position:sticky; top:0; z-index:40; background:rgba(237,240,245,.92); backdrop-filter:saturate(180%) blur(12px); border-bottom:1px solid var(--line)}
+  .head-inner{max-width:1120px; margin:0 auto; padding:12px 14px}
+  .titlerow{display:flex; align-items:center; gap:10px}
+  h1{font-size:18px; font-weight:800; letter-spacing:-.02em; margin:0}
+  .month-label{font-size:13px; font-weight:700; color:var(--ink-2)}
+  .prog{display:flex; align-items:center; gap:8px; margin-left:auto}
+  .bar{width:110px; height:8px; border-radius:99px; background:#DBE1EC; overflow:hidden}
+  .bar > i{display:block; height:100%; width:0; background:linear-gradient(90deg,var(--accent),#5B7BF0); transition:width .35s}
+  .pct{font-size:12.5px; font-weight:800; color:var(--accent); font-variant-numeric:tabular-nums; white-space:nowrap}
+  .iconbtn{flex:none; height:36px; border-radius:10px; border:1px solid var(--line); background:var(--surface); cursor:pointer; display:inline-flex; align-items:center; gap:6px; padding:0 11px; color:var(--ink-2); font:inherit; font-size:12.5px; font-weight:700}
+  .iconbtn:hover{border-color:var(--accent); color:var(--accent)}
+  .iconbtn.gear{display:none; width:36px; padding:0; justify-content:center}
+  .iconbtn.admin{color:var(--done); border-color:#CFE7D8; background:var(--done-bg)}
+
+  .filterbar{display:flex; gap:8px; margin-top:11px; align-items:center; flex-wrap:wrap}
+  .search{flex:1; min-width:200px; position:relative}
+  .search input{width:100%; height:42px; border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:0 12px 0 38px; font:inherit; font-size:15px; color:var(--ink)}
+  .search input:focus{outline:2px solid var(--accent-weak); border-color:var(--accent)}
+  .search svg{position:absolute; left:12px; top:12px; color:var(--ink-2)}
+  .search .clr{position:absolute; right:8px; top:8px; border:0; background:transparent; color:var(--ink-2); cursor:pointer; font-size:16px; display:none; padding:5px}
+  .seg{display:inline-flex; border:1px solid var(--line); border-radius:11px; overflow:hidden; background:var(--surface); height:42px}
+  .seg button{border:0; background:transparent; padding:0 13px; font:inherit; font-size:13.5px; font-weight:700; color:var(--ink-2); cursor:pointer}
+  .seg button.on{background:var(--accent); color:#fff}
+
+  .legend{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px; font-size:12px; color:var(--ink-2)}
+  .legend .lg{display:inline-flex; align-items:center; gap:5px; font-weight:700}
+  .legend .sw{width:10px; height:10px; border-radius:3px}
+
+  .summary{display:none; margin-top:11px; background:var(--surface); border:1px solid var(--line); border-radius:13px; padding:12px 14px; box-shadow:var(--shadow)}
+  .summary.show{display:block}
+  .summary .stop{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+  .summary .who{font-weight:800; font-size:15px}
+  .summary .badge{font-size:12px; font-weight:800; padding:3px 9px; border-radius:99px}
+  .summary .badge.pending{background:#FCEFE3; color:var(--warn)}
+  .summary .badge.clear{background:var(--done-bg); color:var(--done)}
+  .summary .slots{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
+  .summary .slot{font-size:12.5px; font-weight:700; color:var(--ink); background:var(--surface-2); border:1px solid var(--line-2); border-radius:8px; padding:5px 9px; font-variant-numeric:tabular-nums}
+  .summary .slot.done{color:var(--ghost); text-decoration:line-through; text-decoration-color:#CBD3DE}
+  .helpline{margin:10px 2px 0; font-size:12.5px; color:var(--ink-2)}
+
+  main{margin-top:16px}
+  .wkhead{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin:0 0 8px}
+  .wkhead div{font-size:12px; font-weight:800; color:var(--ink-2); text-align:center; padding:5px 0}
+  .cal{display:grid; grid-template-columns:repeat(5,1fr); gap:8px; align-items:start}
+
+  .day{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:8px; min-height:96px; display:flex; flex-direction:column; gap:7px; transition:background .25s,border-color .25s,opacity .2s}
+  .day.empty{background:transparent; border:1px dashed #DCE2EC; min-height:46px; gap:0}
+  .day.exam.alldone{background:var(--done-bg); border-color:#CFE7D8}
+  .day.nomatch{opacity:.4}
+  .day-date{display:flex; align-items:baseline; gap:6px}
+  .day-date b{font-size:14px; font-weight:800; font-variant-numeric:tabular-nums}
+  .day-date small{font-size:11px; font-weight:700; color:var(--ink-2)}
+  .day.empty .day-date b{color:var(--ghost); font-weight:600}
+  .day.empty .day-date small{display:none}
+
+  .period{border-top:1px solid var(--line-2); padding-top:6px}
+  .period:first-of-type{border-top:0; padding-top:0}
+  .pl{display:flex; align-items:center; gap:5px; margin-bottom:5px; flex-wrap:wrap}
+  .pl .pp{font-size:11px; font-weight:800; color:var(--accent); background:var(--accent-weak); border-radius:6px; padding:1px 6px; font-variant-numeric:tabular-nums}
+  .day.alldone .pl .pp{color:var(--done); background:#fff}
+  .pl .ps{font-size:12px; font-weight:700; color:var(--ink-2)}
+  .tag{font-size:10px; font-weight:800; border-radius:5px; padding:1px 5px}
+  .tag.club{color:var(--club); background:var(--club-bg)}
+  .tag.self{color:var(--self); background:var(--self-bg)}
+  .tag.none{color:var(--ink-2); background:var(--surface-2)}
+  /* 동아리/자율 선택 (관리자) */
+  .pick{display:inline-flex; border:1px solid var(--line); border-radius:6px; overflow:hidden; margin-left:auto}
+  .pick button{border:0; background:#fff; font:inherit; font-size:10.5px; font-weight:800; padding:2px 7px; cursor:pointer; color:var(--ink-2)}
+  .pick button.on[data-type="club"]{background:var(--club); color:#fff}
+  .pick button.on[data-type="self"]{background:var(--self); color:#fff}
+  .pickhint{font-size:10.5px; font-weight:700; color:var(--warn)}
+  .names{display:flex; flex-wrap:wrap; gap:5px}
+
+  .name{appearance:none; font:inherit; cursor:pointer; border:1px solid var(--line); background:#fff; color:var(--ink);
+    font-size:13px; font-weight:700; border-radius:8px; padding:5px 9px; display:inline-flex; align-items:center; gap:5px; line-height:1.15; transition:.15s}
+  .name:hover{border-color:var(--accent); color:var(--accent)}
+  .name:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+  .name .ck{width:13px;height:13px;flex:none;display:grid;place-items:center;color:var(--done);opacity:0;transform:scale(.4);transition:.15s}
+  .name.done{border-color:transparent; background:transparent; color:var(--ghost); font-weight:500}
+  .name.done .ck{opacity:1; transform:scale(1)}
+  .name.team::after{content:'팀'; font-size:9px; font-weight:800; color:#fff; background:var(--ink-2); border-radius:4px; padding:1px 3px}
+  .name.done.team::after{background:#C2CAD6}
+  .name.match{box-shadow:0 0 0 2px var(--accent); border-color:var(--accent)}
+  body.locked .name{cursor:default}
+  body.locked .name:hover{border-color:var(--line); color:var(--ink)}
+  body.locked .name.done:hover{color:var(--ghost)}
+
+  .allclear{display:none; text-align:center; padding:40px 18px; background:var(--surface); border:1px solid #CFE7D8; border-radius:14px; box-shadow:var(--shadow); margin-top:6px}
+  .allclear.show{display:block}
+  .allclear .ic{width:48px;height:48px;border-radius:99px;background:var(--done-bg);color:var(--done);display:grid;place-items:center;margin:0 auto 12px}
+  .allclear b{font-size:16px;font-weight:800} .allclear p{margin:5px 0 0;color:var(--ink-2);font-size:14px}
+
+  .toasts{position:fixed; left:0; right:0; bottom:20px; z-index:60; display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; padding:0 16px}
+  .toast{pointer-events:auto; background:var(--ink); color:#fff; border-radius:13px; padding:11px 13px 11px 15px; font-size:14px; font-weight:600; display:flex; align-items:center; gap:14px; box-shadow:0 10px 30px rgba(0,0,0,.25); max-width:440px; width:100%}
+  .toast button{border:0; background:rgba(255,255,255,.16); color:#fff; font:inherit; font-weight:800; font-size:13px; padding:6px 11px; border-radius:9px; cursor:pointer; flex:none}
+  .toast.warn{background:var(--warn)}
+
+  .ov{position:fixed; inset:0; background:rgba(15,22,31,.5); z-index:70; display:none; align-items:flex-end; justify-content:center}
+  .ov.show{display:flex}
+  .sheet{background:var(--surface); width:100%; max-width:520px; border-radius:20px 20px 0 0; padding:20px 18px calc(20px + env(safe-area-inset-bottom)); max-height:90vh; overflow:auto}
+  @media(min-width:560px){.ov{align-items:center}.sheet{border-radius:20px}}
+  .sheet h2{margin:0 0 4px; font-size:17px; font-weight:800}
+  .sheet .desc{margin:0 0 16px; font-size:13px; color:var(--ink-2)}
+  .field{margin-bottom:14px}
+  .field label{display:block; font-size:13px; font-weight:700; margin-bottom:6px}
+  .field label .hint{font-weight:500; color:var(--ink-2)}
+  .field input,.field textarea{width:100%; border:1px solid var(--line); border-radius:11px; background:var(--surface-2); padding:10px 12px; font:inherit; font-size:14px; color:var(--ink); resize:vertical}
+  .field textarea{font-family:ui-monospace,Menlo,monospace; font-size:12.5px; min-height:120px; line-height:1.45}
+  .field input:focus,.field textarea:focus{outline:2px solid var(--accent-weak); border-color:var(--accent)}
+  .status{display:inline-flex; align-items:center; gap:7px; font-size:12.5px; font-weight:700; padding:5px 10px; border-radius:99px; margin-bottom:14px}
+  .status .led{width:8px;height:8px;border-radius:99px;background:currentColor}
+  .status.ok{color:var(--done); background:var(--done-bg)} .status.off{color:var(--warn); background:#FCEDE5}
+  .row{display:flex; gap:9px; margin-top:6px}
+  .btn{flex:1; border:0; border-radius:12px; padding:13px; font:inherit; font-size:15px; font-weight:800; cursor:pointer}
+  .btn.primary{background:var(--accent); color:#fff} .btn.ghost{background:var(--surface-2); color:var(--ink); border:1px solid var(--line)}
+  .btn.danger{background:#fff; color:var(--warn); border:1px solid #F0C9B6}
+  .mini{font-size:12px; color:var(--ink-2); margin-top:10px; line-height:1.55}
+  .mini code{background:var(--surface-2); padding:1px 5px; border-radius:5px; font-size:11.5px}
+
+  @media (max-width:720px){
+    .wrap{padding-left:10px; padding-right:10px}
+    .cal,.wkhead{gap:5px}
+    .day{padding:6px; min-height:78px}
+    .name{font-size:12px; padding:4px 7px}
+    .pl .ps{font-size:11px}
+  }
+  @media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+</head>
+<body class="locked">
+<header class="app">
+  <div class="head-inner">
+    <div class="titlerow">
+      <h1>출결 확인 달력</h1>
+      <span class="month-label" id="monthLabel"></span>
+      <div class="prog"><div class="bar"><i id="barFill"></i></div><span class="pct" id="pctLabel">0 / 0</span></div>
+      <button class="iconbtn" id="lockBtn"></button>
+      <button class="iconbtn gear" id="settingsBtn" aria-label="설정">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+    </div>
+
+    <div class="filterbar">
+      <div class="search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-3.5-3.5"/></svg>
+        <input id="searchInput" type="search" placeholder="선생님 성함으로 미완료 찾기" autocomplete="off" />
+        <button class="clr" id="searchClear" aria-label="지우기">✕</button>
+      </div>
+      <div class="seg" id="modeSeg"><button data-mode="pending" class="on">미완료만</button><button data-mode="all">전체</button></div>
+    </div>
+
+    <div class="legend">
+      <span class="lg"><span class="sw" style="background:var(--club)"></span>동아리</span>
+      <span class="lg"><span class="sw" style="background:var(--self)"></span>자율</span>
+    </div>
+
+    <div class="summary" id="summary"></div>
+    <p class="helpline" id="helpline"></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="wkhead"><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div></div>
+  <div class="cal" id="cal"></div>
+  <div class="allclear" id="allClear">
+    <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></div>
+    <b>모든 교시의 출결 확인이 완료되었습니다</b><p>남은 교시가 없습니다.</p>
+  </div>
+</main>
+
+<div class="toasts" id="toasts"></div>
+
+<div class="ov" id="settingsOv">
+  <div class="sheet">
+    <h2>설정 (관리자)</h2>
+    <p class="desc">이 기기에 저장됩니다. Firebase 설정을 넣으면 모든 선생님과 실시간으로 공유됩니다.</p>
+    <div class="status off" id="connStatus"><span class="led"></span><span id="connText">Firebase 미설정 · 이 기기에만 저장</span></div>
+    <div class="field"><label>게시판 ID <span class="hint">(시험마다 다르게)</span></label><input id="boardKeyInput" placeholder="exam-2026-1-final" /></div>
+    <div class="field"><label>Firebase 설정 <span class="hint">(firebaseConfig 붙여넣기)</span></label><textarea id="fbConfigInput" placeholder='{ "apiKey":"...", "projectId":"...", "appId":"..." }'></textarea></div>
+    <div class="row"><button class="btn ghost" id="settingsCancel">취소</button><button class="btn primary" id="settingsSave">저장</button></div>
+    <div class="row"><button class="btn danger" id="resetAll">완료표시 전체 초기화</button></div>
+    <p class="mini">Firestore 규칙 예시: <code>match /attendance_boards/{id} { allow read, write: if true; }</code></p>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc, deleteField }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+/* ============================================================
+   ★ 기본 설정 — 여기만 고치면 됩니다
+   ============================================================ */
+const YEAR = 2026;        // 올해
+const MONTH = 6;          // 월(1~12) — 달력 전체가 이 달 기준으로 자동 생성
+const ADMIN_PIN = "2026"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
+const MY_NAME = "노홍종";  // 자율일 때 들어갈 본인 이름
+
+/* ★ 배포 시 필수 ★ Firebase 콘솔의 firebaseConfig를 아래에 JSON으로 채우세요.
+   (키를 큰따옴표로 감싼 JSON 형식. const/세미콜론 없이 중괄호 안 내용만)
+   비워두면 '이 기기에만 저장'으로 동작해 다른 선생님과 공유가 안 됩니다. */
+const FIREBASE_CONFIG = {
+  "apiKey": "AIzaSyA_nh4uydOJHYzMyYiS9zshN4QafaTD3Qc",
+  "authDomain": "classattendance-26bf6.firebaseapp.com",
+  "projectId": "classattendance-26bf6",
+  "storageBucket": "classattendance-26bf6.firebasestorage.app",
+  "messagingSenderId": "315819184986",
+  "appId": "1:315819184986:web:d3cc4e11ff3df60731d963"
+};
+
+/* 동아리 담당 교사 명단 (창체를 '동아리'로 선택하면 이 명단이 들어감)
+   ※ 한 칸에 여러 명이 한 동아리면 ["김현주","송영희","조누리"] 처럼 배열로. (실제 명단 알려주시면 교체) */
+const CLUB_TEACHERS = ["강수빈","정연이","송미경",["김현주","송영희","조누리"],"최성연",["남상두","백경미"],
+  "박영신","이현주",["이현경","임현희"],"이진선","방현주","최지현","임은순","김민재","정재훈"];
+
+/* 시험주 일정 (일자 기준). 창체 칸은 pick:true(동아리/자율 선택), 자율 고정칸은 fixed:"self".
+   ※ 아래 22~26은 2026년 동일 요일(월~금) 자리표시 — 실제 시험 날짜 알려주시면 맞춰드립니다. */
+const EXAM = {
+  22: [ // 월
+    {p:1, subj:"미적분1", t:["최현성"]},
+    {p:2, subj:"탐구D", t:["이진선","서경원","임은순","최강현","정재훈","백경미"]},
+    {p:3, subj:"스포츠 생활1", t:["김준석"]},
+    {p:4, subj:"스포츠 생활1", t:["김준석"]},
+    {p:5, subj:"탐구B", t:["김상혁","김준우","이진선","정인준","임은순","서경원"]},
+    {p:6, subj:"탐구A", t:["박지혜","신원우","정재훈","임은순","백경미"]},
+    {p:7, subj:"탐구C", t:["신원우","최강현","서경원","정인준","김준우"]},
+  ],
+  23: [ // 화
+    {p:1, subj:"일본어", t:["이현경"]},
+    {p:2, subj:"영어1", t:["임현희"]},
+    {p:3, subj:"문학", t:["박정호"]},
+    {p:4, subj:"대수", t:["노홍종"]},
+    {p:5, subj:"미적분1", t:["최현성"]},
+    {p:6, subj:"탐구B", t:["김상혁","김준우","이진선","정인준","임은순","서경원"]},
+  ],
+  24: [ // 수
+    {p:2, subj:"대수", t:["노홍종"]},
+    {p:3, subj:"탐구A", t:["박지혜","신원우","정재훈","임은순","백경미"]},
+    {p:4, subj:"탐구D", t:["이진선","서경원","임은순","최강현","정재훈","백경미"]},
+    {p:5, subj:"일본어", t:["이현경"]},
+    {p:6, subj:"창체", pick:true},   // 동아리/자율 선택
+    {p:7, subj:"창체", pick:true},   // 동아리/자율 선택
+  ],
+  25: [ // 목
+    {p:1, subj:"탐구C", t:["신원우","최강현","서경원","정인준","김준우"]},
+    {p:2, subj:"진로", t:["정보영"]},
+    {p:3, subj:"일본어", t:["이현경"]},
+    {p:4, subj:"탐구A", t:["박지혜","신원우","정재훈","임은순","백경미"]},
+    {p:5, subj:"문학", t:["박정호"]},
+    {p:6, subj:"미적분1", t:["최현성"]},
+    {p:7, subj:"영어1", t:["임현희"]},
+  ],
+  26: [ // 금
+    {p:1, subj:"탐구C", t:["신원우","최강현","서경원","정인준","김준우"]},
+    {p:2, subj:"문학", t:["박정호"]},
+    {p:3, subj:"탐구D", t:["이진선","서경원","임은순","최강현","정재훈","백경미"]},
+    {p:4, subj:"탐구B", t:["김상혁","김준우","이진선","정인준","임은순","서경원"]},
+    {p:5, subj:"대수", t:["노홍종"]},
+    {p:6, subj:"영어1", t:["임현희"]},
+    {p:7, subj:"자율", fixed:"self"},   // 금요일 7교시 자율 고정 → 본인
+  ],
+};
+
+/* 시험주 외 평소 주간 패턴: 수요일 6·7교시 창체(선택), 금요일 7교시 자율(고정) */
+const WEEKLY = {
+  2: [ {p:6, subj:"창체", pick:true}, {p:7, subj:"창체", pick:true} ], // 수=2
+  4: [ {p:7, subj:"자율", fixed:"self"} ],                              // 금=4
+};
+const TAG_LABEL = {club:'동아리', self:'자율'};
+function rosterOf(type){ return type==='club'?CLUB_TEACHERS : type==='self'?[MY_NAME] : []; }
+
+/* ---- 달력 셀(월~금, 주말 제외) : 실제 달력 ---- */
+const WD_KO=['월','화','수','목','금'];
+const daysInMonth=new Date(YEAR,MONTH,0).getDate();
+function weekday(dom){ return (new Date(YEAR,MONTH-1,dom).getDay()+6)%7; } // 월=0..일=6
+const cells=[]; let firstWd=null;
+for(let dom=1; dom<=daysInMonth; dom++){ const w=weekday(dom); if(w>4)continue; if(firstWd===null)firstWd=w; cells.push({dom,w}); }
+const grid=[]; for(let i=0;i<firstWd;i++) grid.push({empty:true}); grid.push(...cells); while(grid.length%5) grid.push({empty:true});
+const WEEKDAY_DOMS = cells.map(c=>c.dom);
+
+/* ============================================================
+   해석: dom → 교시[] (현재 선택된 유형 반영)
+   ============================================================ */
+function buildDay(dom){
+  let periods = EXAM[dom] || WEEKLY[weekday(dom)] || null;
+  if(!periods) return null;
+  return periods.map(per=>{
+    const slotId=`m${MONTH}_${dom}_p${per.p}`;
+    if(per.fixed || per.pick){
+      const type = per.fixed || types[slotId] || null;
+      const roster = rosterOf(type);
+      const units = roster.map((u,i)=>{ const names=Array.isArray(u)?u:[u];
+        return { id:`${slotId}_${type}_${i}`, names, label:names.join('·'), team:names.length>1 }; });
+      return { p:per.p, subj:per.subj, slotId, pick:!!per.pick, fixed:per.fixed||null, type, tag:type, units };
+    }
+    const units = per.t.map((u,i)=>{ const names=Array.isArray(u)?u:[u];
+      return { id:`${slotId}_u${i}`, names, label:names.join('·'), team:names.length>1 }; });
+    return { p:per.p, subj:per.subj, slotId, tag:per.tag||null, units };
+  });
+}
+function allItems(){
+  const out=[];
+  for(const dom of WEEKDAY_DOMS){ const ps=buildDay(dom); if(!ps)continue;
+    for(const p of ps) for(const u of p.units) out.push({...u, dom, p:p.p, subj:p.subj, tag:p.tag}); }
+  return out;
+}
+
+/* ============================================================
+   상태 + Firebase
+   ============================================================ */
+const LS={cfg:'attnc_cfg', board:'attnc_board', cache:'attnc_cache_', admin:'attnc_admin'};
+let checked={}, types={}, db=null, unsub=null, online=false;
+let boardKey=localStorage.getItem(LS.board)||'exam-2026-1-final';
+let query='', mode='pending';
+let admin=localStorage.getItem(LS.admin)==='1';
+
+const $=s=>document.querySelector(s);
+const el=(t,c)=>{const e=document.createElement(t); if(c)e.className=c; return e;};
+
+function loadCache(){ try{const c=localStorage.getItem(LS.cache+boardKey); if(c){const o=JSON.parse(c)||{}; checked=o.checked||{}; types=o.types||{};}}catch{} }
+function saveCache(){ try{localStorage.setItem(LS.cache+boardKey,JSON.stringify({checked,types}));}catch{} }
+
+function activeCfg(){
+  const raw=localStorage.getItem(LS.cfg);
+  if(raw){ try{ return JSON.parse(raw); }catch{ return undefined; } } // undefined = 형식 오류
+  if(FIREBASE_CONFIG && FIREBASE_CONFIG.projectId) return FIREBASE_CONFIG;
+  return null; // 설정 없음
+}
+function connectFirebase(){
+  if(unsub){unsub();unsub=null;} online=false; db=null;
+  const cfg=activeCfg();
+  if(cfg===undefined){ updateConn('설정 형식 오류'); return; }
+  if(!cfg){ updateConn(); return; }
+  try{
+    const app=initializeApp(cfg,'attnc-'+Date.now());
+    db=getFirestore(app);
+    unsub=onSnapshot(doc(db,'attendance_boards',boardKey), snap=>{ online=true; updateConn();
+      const d=snap.exists()?snap.data():{}; checked=d.checked||{}; types=d.types||{}; saveCache(); render();
+    }, err=>{ online=false; updateConn('연결 오류: '+err.code); });
+  }catch{ updateConn('초기화 실패'); }
+}
+async function writeItem(id,on){
+  if(!db) return;
+  await setDoc(doc(db,'attendance_boards',boardKey),{checked:{[id]: on?{ts:Date.now()}:deleteField()}},{merge:true});
+}
+async function toggle(id){
+  if(!admin){ toast('관리자만 출결 확인을 변경할 수 있어요'); return; }
+  const on=!checked[id];
+  if(on)checked[id]=true; else delete checked[id];
+  saveCache(); render();
+  try{ await writeItem(id,on); }
+  catch{ if(on)delete checked[id]; else checked[id]=true; saveCache(); render(); toast('저장 실패 — 인터넷/설정 확인',null,true); return; }
+}
+async function setType(slotId,type){
+  if(!admin){ toast('관리자만 변경 가능'); return; }
+  if(types[slotId]===type) type=null;          // 같은 걸 다시 누르면 해제
+  if(type) types[slotId]=type; else delete types[slotId];
+  saveCache(); render();
+  try{ if(db) await setDoc(doc(db,'attendance_boards',boardKey),{types:{[slotId]: type?type:deleteField()}},{merge:true}); }
+  catch{ toast('저장 실패',null,true); }
+}
+
+/* ============================================================
+   렌더
+   ============================================================ */
+const calEl=$('#cal');
+$('#monthLabel').textContent=`${YEAR}.${MONTH}`;
+
+function render(){
+  const items=allItems();
+  const total=items.length, done=items.filter(x=>checked[x.id]).length;
+  $('#barFill').style.width=total?(done/total*100)+'%':'0%';
+  $('#pctLabel').textContent=`${done} / ${total}`;
+
+  const q=query, filtering=!!q;
+  renderSummary(q, items);
+
+  calEl.innerHTML='';
+  for(const cell of grid){
+    if(cell.empty){ calEl.appendChild(el('div','day empty')); continue; }
+    const dom=cell.dom, periods=buildDay(dom);
+    const day=el('div', periods?'day exam':'day empty');
+    const head=el('div','day-date'); head.innerHTML=`<b>${dom}</b><small>${WD_KO[cell.w]}</small>`;
+    day.appendChild(head);
+    if(!periods){ calEl.appendChild(day); continue; }
+
+    const dayItems=periods.flatMap(p=>p.units);
+    if(dayItems.length && dayItems.every(u=>checked[u.id])) day.classList.add('alldone');
+
+    let dayHasMatch=false;
+    for(const per of periods){
+      let units=per.units;
+      if(filtering){
+        units=per.units.filter(u=> u.names.some(n=>n.includes(q)) && (mode==='all'||!checked[u.id]) );
+        if(units.length===0 && !(per.pick && admin)) continue;
+        if(units.length) dayHasMatch=true;
+        if(units.length===0) continue;
+      }
+      const pd=el('div','period');
+      const pl=el('div','pl');
+      pl.innerHTML=`<span class="pp">${per.p}교시</span><span class="ps">${per.subj}</span>`;
+      // 태그 / 선택기
+      if(per.pick){
+        if(admin && !filtering){
+          const pick=el('div','pick');
+          pick.innerHTML=`<button data-type="club" class="${per.type==='club'?'on':''}">동아리</button><button data-type="self" class="${per.type==='self'?'on':''}">자율</button>`;
+          pick.querySelectorAll('button').forEach(b=> b.onclick=()=>setType(per.slotId,b.dataset.type));
+          pl.appendChild(pick);
+          if(!per.type){ const h=el('span','pickhint'); h.textContent='← 선택'; pl.appendChild(h); }
+        } else if(per.type){
+          pl.insertAdjacentHTML('beforeend', `<span class="tag ${per.type}">${TAG_LABEL[per.type]}</span>`);
+        } else {
+          pl.insertAdjacentHTML('beforeend', `<span class="tag none">유형 미정</span>`);
+        }
+      } else if(per.tag){
+        pl.insertAdjacentHTML('beforeend', `<span class="tag ${per.tag}">${TAG_LABEL[per.tag]||''}</span>`);
+      }
+      pd.appendChild(pl);
+
+      const names=el('div','names');
+      for(const u of units){
+        const on=!!checked[u.id];
+        const isMatch=filtering && u.names.some(n=>n.includes(q));
+        const b=el('button','name'+(on?' done':'')+(u.team?' team':'')+(isMatch?' match':''));
+        b.type='button'; b.setAttribute('aria-pressed',on);
+        b.innerHTML=`<span class="ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2"><path d="M20 6 9 17l-5-5"/></svg></span><span>${u.label}</span>`;
+        b.onclick=()=>toggle(u.id);
+        names.appendChild(b);
+      }
+      pd.appendChild(names);
+      day.appendChild(pd);
+    }
+    if(filtering && !dayHasMatch) day.classList.add('nomatch');
+    calEl.appendChild(day);
+  }
+  $('#allClear').classList.toggle('show', total>0 && done===total && !filtering);
+}
+
+function renderSummary(q, items){
+  const box=$('#summary');
+  if(!q){ box.classList.remove('show'); box.innerHTML=''; return; }
+  const mine=items.filter(x=>x.names.some(n=>n.includes(q)));
+  const pending=mine.filter(x=>!checked[x.id]);
+  box.classList.add('show');
+  if(mine.length===0){ box.innerHTML=`<div class="stop"><span class="who">"${q}"</span><span class="badge pending">해당 없음</span></div>`; return; }
+  const show=mode==='all'?mine:pending;
+  const head=pending.length===0
+    ? `<span class="who">${q}</span><span class="badge clear">모두 완료 ✓</span>`
+    : `<span class="who">${q}</span><span class="badge pending">미완료 ${pending.length}건</span>`;
+  let slots='';
+  for(const x of show){ const tg=x.tag?` (${TAG_LABEL[x.tag]||''})`:''; slots+=`<span class="slot${checked[x.id]?' done':''}">${x.dom}일 ${x.p}교시 · ${x.subj}${tg}</span>`; }
+  box.innerHTML=`<div class="stop">${head}</div>${slots?`<div class="slots">${slots}</div>`:''}`;
+}
+
+/* ============================================================
+   잠금 / 관리자
+   ============================================================ */
+function renderLock(){
+  document.body.classList.toggle('locked', !admin);
+  const b=$('#lockBtn');
+  if(admin){
+    b.className='iconbtn admin';
+    b.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>관리자';
+    $('#settingsBtn').style.display='inline-flex';
+    $('#helpline').innerHTML='관리자 모드 — 창체 칸의 <b>동아리/자율</b>을 고르고, 나이스 확인 후 <b>이름을 누르면 완료</b>됩니다.';
+  }else{
+    b.className='iconbtn';
+    b.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>조회 전용';
+    $('#settingsBtn').style.display='none';
+    $('#helpline').innerHTML='<b>진하게 남은 본인 이름</b>이 아직 출결 확인이 안 된 교시입니다. (변경은 관리자만)';
+  }
+  render();
+}
+$('#lockBtn').onclick=()=>{
+  if(admin){ admin=false; localStorage.removeItem(LS.admin); renderLock(); toast('조회 전용으로 전환'); }
+  else{ const p=prompt('관리자 비밀번호'); if(p===null)return; if(p===ADMIN_PIN){ admin=true; localStorage.setItem(LS.admin,'1'); renderLock(); toast('관리자 모드'); } else toast('비밀번호가 올바르지 않습니다',null,true); }
+};
+
+/* ============================================================
+   이벤트
+   ============================================================ */
+function updateConn(extra){
+  const s=$('#connStatus'), t=$('#connText');
+  if(online){ s.className='status ok'; t.textContent='Firebase 연결됨 · 실시간 공유 중'; }
+  else{ const hasCfg=localStorage.getItem(LS.cfg)||(FIREBASE_CONFIG&&FIREBASE_CONFIG.projectId);
+    s.className='status off'; t.textContent=extra?('미연결 · '+extra):(hasCfg?'연결 시도 중…':'Firebase 미설정 · 이 기기에만 저장'); }
+}
+function toast(msg, undo, warn){
+  const box=$('#toasts'); const t=el('div','toast'+(warn?' warn':''));
+  t.innerHTML=`<span>${msg}</span>`;
+  if(undo){ const b=el('button'); b.textContent='되돌리기'; b.onclick=()=>{undo();t.remove();}; t.appendChild(b); }
+  box.appendChild(t);
+  setTimeout(()=>{t.style.transition='opacity .3s';t.style.opacity='0';setTimeout(()=>t.remove(),300);}, undo?5000:2400);
+}
+$('#searchInput').addEventListener('input',e=>{ query=e.target.value.trim(); $('#searchClear').style.display=query?'block':'none'; render(); });
+$('#searchClear').onclick=()=>{ $('#searchInput').value=''; query=''; $('#searchClear').style.display='none'; render(); };
+$('#modeSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; mode=b.dataset.mode; document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x===b)); render(); });
+
+const ov=$('#settingsOv');
+$('#settingsBtn').onclick=()=>{ $('#boardKeyInput').value=boardKey; $('#fbConfigInput').value=localStorage.getItem(LS.cfg)||''; updateConn(); ov.classList.add('show'); };
+$('#settingsCancel').onclick=()=>ov.classList.remove('show');
+ov.addEventListener('click',e=>{ if(e.target===ov) ov.classList.remove('show'); });
+$('#settingsSave').onclick=()=>{
+  const nb=$('#boardKeyInput').value.trim()||'exam-2026-1-final';
+  const cfgRaw=$('#fbConfigInput').value.trim();
+  if(cfgRaw){ try{JSON.parse(cfgRaw); localStorage.setItem(LS.cfg,cfgRaw);}catch{ toast('Firebase 설정이 올바른 JSON이 아닙니다',null,true); return; } }
+  else localStorage.removeItem(LS.cfg);
+  const changed=nb!==boardKey; boardKey=nb; localStorage.setItem(LS.board,boardKey);
+  if(changed){ checked={}; types={}; }
+  loadCache(); ov.classList.remove('show'); connectFirebase(); render();
+};
+$('#resetAll').onclick=async()=>{
+  if(!confirm('모든 완료 표시를 해제합니다. (동아리/자율 선택은 유지) 계속할까요?')) return;
+  checked={}; saveCache(); render();
+  try{ if(db) await setDoc(doc(db,'attendance_boards',boardKey),{checked:{}},{merge:true}); toast('완료표시 초기화'); }
+  catch{ toast('원격 초기화 실패 (이 기기만 초기화됨)',null,true); }
+  ov.classList.remove('show');
+};
+
+/* 시작 */
+loadCache(); renderLock(); connectFirebase();
+</script>
+</body>
+</html>
