@@ -57,6 +57,9 @@
   .summary .slots{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px}
   .summary .slot{font-size:12.5px; font-weight:700; color:var(--ink); background:var(--surface-2); border:1px solid var(--line-2); border-radius:8px; padding:5px 9px; font-variant-numeric:tabular-nums}
   .summary .slot.done{color:var(--ghost); text-decoration:line-through; text-decoration-color:#CBD3DE}
+  .copybtn{margin-left:auto; border:1px solid var(--line); background:var(--surface); color:var(--ink); font:inherit; font-size:12.5px; font-weight:800; padding:6px 11px; border-radius:9px; cursor:pointer; display:inline-flex; align-items:center; gap:5px}
+  .copybtn:hover{border-color:var(--accent); color:var(--accent)}
+  .copybtn.done{border-color:#CFE7D8; color:var(--done); background:var(--done-bg)}
   .helpline{margin:10px 2px 0; font-size:12.5px; color:var(--ink-2)}
 
   main{margin-top:16px}
@@ -92,19 +95,18 @@
   .pickhint{font-size:10.5px; font-weight:700; color:var(--warn)}
   .names{display:flex; flex-wrap:wrap; gap:5px}
 
-  .name{appearance:none; font:inherit; cursor:pointer; border:1px solid var(--line); background:#fff; color:var(--ink);
-    font-size:13px; font-weight:700; border-radius:8px; padding:5px 9px; display:inline-flex; align-items:center; gap:5px; line-height:1.15; transition:.15s}
-  .name:hover{border-color:var(--accent); color:var(--accent)}
+  .names{display:block; line-height:1.75; font-size:13.5px}
+  .name{cursor:pointer; color:var(--ink); font-weight:700; padding:0 1px; border-radius:4px; transition:.12s}
+  .name:hover{color:var(--accent); text-decoration:underline; text-underline-offset:3px}
   .name:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
-  .name .ck{width:13px;height:13px;flex:none;display:grid;place-items:center;color:var(--done);opacity:0;transform:scale(.4);transition:.15s}
-  .name.done{border-color:transparent; background:transparent; color:var(--ghost); font-weight:500}
-  .name.done .ck{opacity:1; transform:scale(1)}
-  .name.team::after{content:'팀'; font-size:9px; font-weight:800; color:#fff; background:var(--ink-2); border-radius:4px; padding:1px 3px}
-  .name.done.team::after{background:#C2CAD6}
-  .name.match{box-shadow:0 0 0 2px var(--accent); border-color:var(--accent)}
+  .name.done{color:var(--ghost); font-weight:500}
+  .name.done:hover{color:var(--ink-2); text-decoration:line-through}
+  .name.match{background:var(--accent-weak); color:var(--accent); padding:1px 5px}
+  .sep{color:#C7CEDA; margin:0 5px; user-select:none}
+  .pdone{font-size:12px; font-weight:700; color:var(--done)}
   body.locked .name{cursor:default}
-  body.locked .name:hover{border-color:var(--line); color:var(--ink)}
-  body.locked .name.done:hover{color:var(--ghost)}
+  body.locked .name:hover{color:var(--ink); text-decoration:none}
+  body.locked .name.done:hover{color:var(--ghost); text-decoration:none}
 
   .allclear{display:none; text-align:center; padding:40px 18px; background:var(--surface); border:1px solid #CFE7D8; border-radius:14px; box-shadow:var(--shadow); margin-top:6px}
   .allclear.show{display:block}
@@ -167,7 +169,7 @@
         <input id="searchInput" type="search" placeholder="선생님 성함으로 미완료 찾기" autocomplete="off" />
         <button class="clr" id="searchClear" aria-label="지우기">✕</button>
       </div>
-      <div class="seg" id="modeSeg"><button data-mode="pending" class="on">미완료만</button><button data-mode="all">전체</button></div>
+      <div class="seg" id="modeSeg"><button data-mode="pending" class="on">완료 숨기기</button><button data-mode="all">전체 보기</button></div>
     </div>
 
     <div class="legend">
@@ -214,7 +216,7 @@ import { getFirestore, doc, onSnapshot, setDoc, deleteField }
    ============================================================ */
 const YEAR = 2026;        // 올해
 const MONTH = 6;          // 월(1~12) — 달력 전체가 이 달 기준으로 자동 생성
-const ADMIN_PIN = "20100666"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
+const ADMIN_PIN = "2026"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
 const MY_NAME = "노홍종";  // 자율일 때 들어갈 본인 이름
 
 /* ★ 배포 시 필수 ★ Firebase 콘솔의 firebaseConfig를 아래에 JSON으로 채우세요.
@@ -259,8 +261,7 @@ const EXAM = {
     {p:3, subj:"탐구A", t:["박지혜","신원우","정재훈","임은순","백경미"]},
     {p:4, subj:"탐구D", t:["이진선","서경원","임은순","최강현","정재훈","백경미"]},
     {p:5, subj:"일본어", t:["이현경"]},
-    {p:6, subj:"창체", pick:true},   // 동아리/자율 선택
-    {p:7, subj:"창체", pick:true},   // 동아리/자율 선택
+    {p:6, pLabel:"6·7", subj:"창체", pick:true},   // 6·7교시 통합, 동아리/자율 선택
   ],
   25: [ // 목
     {p:1, subj:"탐구C", t:["신원우","최강현","서경원","정인준","김준우"]},
@@ -284,7 +285,7 @@ const EXAM = {
 
 /* 시험주 외 평소 주간 패턴: 수요일 6·7교시 창체(선택), 금요일 7교시 자율(고정) */
 const WEEKLY = {
-  2: [ {p:6, subj:"창체", pick:true}, {p:7, subj:"창체", pick:true} ], // 수=2
+  2: [ {p:6, pLabel:"6·7", subj:"창체", pick:true} ], // 수=2 (6·7교시 통합)
   4: [ {p:7, subj:"자율", fixed:"self"} ],                              // 금=4
 };
 const TAG_LABEL = {club:'동아리', self:'자율'};
@@ -312,27 +313,27 @@ function buildDay(dom){
       const roster = rosterOf(type);
       const units = roster.map((u,i)=>{ const names=Array.isArray(u)?u:[u];
         return { id:`${slotId}_${type}_${i}`, names, label:names.join('·'), team:names.length>1 }; });
-      return { p:per.p, subj:per.subj, slotId, pick:!!per.pick, fixed:per.fixed||null, type, tag:type, units };
+      return { p:per.p, pLabel:per.pLabel||null, subj:per.subj, slotId, pick:!!per.pick, fixed:per.fixed||null, type, tag:type, units };
     }
     const units = per.t.map((u,i)=>{ const names=Array.isArray(u)?u:[u];
       return { id:`${slotId}_u${i}`, names, label:names.join('·'), team:names.length>1 }; });
-    return { p:per.p, subj:per.subj, slotId, tag:per.tag||null, units };
+    return { p:per.p, pLabel:per.pLabel||null, subj:per.subj, slotId, tag:per.tag||null, units };
   });
 }
 function allItems(){
   const out=[];
   for(const dom of WEEKDAY_DOMS){ const ps=buildDay(dom); if(!ps)continue;
-    for(const p of ps) for(const u of p.units) out.push({...u, dom, p:p.p, subj:p.subj, tag:p.tag}); }
+    for(const p of ps) for(const u of p.units) out.push({...u, dom, p:p.p, pLabel:p.pLabel, subj:p.subj, tag:p.tag}); }
   return out;
 }
 
 /* ============================================================
    상태 + Firebase
    ============================================================ */
-const LS={cfg:'attnc_cfg', board:'attnc_board', cache:'attnc_cache_', admin:'attnc_admin'};
+const LS={cfg:'attnc_cfg', board:'attnc_board', cache:'attnc_cache_', admin:'attnc_admin', mode:'attnc_mode'};
 let checked={}, types={}, db=null, unsub=null, online=false;
 let boardKey=localStorage.getItem(LS.board)||'exam-2026-1-final';
-let query='', mode='pending';
+let query='', mode=localStorage.getItem(LS.mode)||'pending';
 let admin=localStorage.getItem(LS.admin)==='1';
 
 const $=s=>document.querySelector(s);
@@ -410,16 +411,21 @@ function render(){
 
     let dayHasMatch=false;
     for(const per of periods){
-      let units=per.units;
+      const total=per.units.length;
+      const allDone = total>0 && per.units.every(u=>checked[u.id]);
+      // 표시할 이름 결정 (검색 + 완료 숨기기 토글)
+      let visible = per.units;
       if(filtering){
-        units=per.units.filter(u=> u.names.some(n=>n.includes(q)) && (mode==='all'||!checked[u.id]) );
-        if(units.length===0 && !(per.pick && admin)) continue;
-        if(units.length) dayHasMatch=true;
-        if(units.length===0) continue;
+        visible = per.units.filter(u=> u.names.some(n=>n.includes(q)) && (mode==='all'||!checked[u.id]) );
+        if(visible.length===0 && !(per.pick && admin)) continue;
+        if(visible.length) dayHasMatch=true;
+      } else if(mode==='pending'){
+        visible = per.units.filter(u=> !checked[u.id]);
       }
+
       const pd=el('div','period');
       const pl=el('div','pl');
-      pl.innerHTML=`<span class="pp">${per.p}교시</span><span class="ps">${per.subj}</span>`;
+      pl.innerHTML=`<span class="pp">${per.pLabel||per.p}교시</span><span class="ps">${per.subj}</span>`;
       // 태그 / 선택기
       if(per.pick){
         if(admin && !filtering){
@@ -439,14 +445,21 @@ function render(){
       pd.appendChild(pl);
 
       const names=el('div','names');
-      for(const u of units){
-        const on=!!checked[u.id];
-        const isMatch=filtering && u.names.some(n=>n.includes(q));
-        const b=el('button','name'+(on?' done':'')+(u.team?' team':'')+(isMatch?' match':''));
-        b.type='button'; b.setAttribute('aria-pressed',on);
-        b.innerHTML=`<span class="ck"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2"><path d="M20 6 9 17l-5-5"/></svg></span><span>${u.label}</span>`;
-        b.onclick=()=>toggle(u.id);
-        names.appendChild(b);
+      if(visible.length===0){
+        if(allDone) names.innerHTML='<span class="pdone">✓ 전원 완료</span>';
+        // 유형 미선택 등으로 명단이 없으면 비워둠
+      } else {
+        visible.forEach((u,i)=>{
+          if(i>0){ const sep=el('span','sep'); sep.textContent='·'; names.appendChild(sep); }
+          const on=!!checked[u.id];
+          const isMatch=filtering && u.names.some(n=>n.includes(q));
+          const s=el('span','name'+(on?' done':'')+(u.team?' team':'')+(isMatch?' match':''));
+          s.setAttribute('role','button'); s.setAttribute('aria-pressed',on); s.tabIndex=0;
+          s.textContent = u.team ? `(${u.label})` : u.label;
+          s.onclick=()=>toggle(u.id);
+          s.onkeydown=(ev)=>{ if(ev.key==='Enter'||ev.key===' '){ ev.preventDefault(); toggle(u.id); } };
+          names.appendChild(s);
+        });
       }
       pd.appendChild(names);
       day.appendChild(pd);
@@ -465,12 +478,23 @@ function renderSummary(q, items){
   box.classList.add('show');
   if(mine.length===0){ box.innerHTML=`<div class="stop"><span class="who">"${q}"</span><span class="badge pending">해당 없음</span></div>`; return; }
   const show=mode==='all'?mine:pending;
-  const head=pending.length===0
-    ? `<span class="who">${q}</span><span class="badge clear">모두 완료 ✓</span>`
-    : `<span class="who">${q}</span><span class="badge pending">미완료 ${pending.length}건</span>`;
+  const badge=pending.length===0
+    ? `<span class="badge clear">모두 완료 ✓</span>`
+    : `<span class="badge pending">미완료 ${pending.length}건</span>`;
+  const copyBtn = pending.length>0 ? `<button class="copybtn" id="copyBtn">📋 미완료 복사</button>` : '';
   let slots='';
-  for(const x of show){ const tg=x.tag?` (${TAG_LABEL[x.tag]||''})`:''; slots+=`<span class="slot${checked[x.id]?' done':''}">${x.dom}일 ${x.p}교시 · ${x.subj}${tg}</span>`; }
-  box.innerHTML=`<div class="stop">${head}</div>${slots?`<div class="slots">${slots}</div>`:''}`;
+  for(const x of show){ const tg=x.tag?` (${TAG_LABEL[x.tag]||''})`:''; const pl=x.pLabel||x.p;
+    slots+=`<span class="slot${checked[x.id]?' done':''}">${x.dom}일 ${pl}교시 · ${x.subj}${tg}</span>`; }
+  box.innerHTML=`<div class="stop"><span class="who">${q}</span>${badge}${copyBtn}</div>${slots?`<div class="slots">${slots}</div>`:''}`;
+
+  const cb=$('#copyBtn');
+  if(cb) cb.onclick=()=>{
+    const lines=pending.map(x=>{ const tg=x.tag?`(${TAG_LABEL[x.tag]||''})`:''; const pl=x.pLabel||x.p;
+      return `${x.dom}일 ${pl}교시 ${x.subj}${tg}`; });
+    const text=`[출결 확인 요청] ${q} 선생님\n미완료 ${pending.length}건\n`+lines.map(l=>'· '+l).join('\n');
+    navigator.clipboard.writeText(text).then(()=>{ cb.textContent='✓ 복사됨'; cb.classList.add('done'); setTimeout(()=>{cb.textContent='📋 미완료 복사'; cb.classList.remove('done');},1500); })
+      .catch(()=>toast('복사 실패 — 브라우저 권한 확인',null,true));
+  };
 }
 
 /* ============================================================
@@ -515,7 +539,8 @@ function toast(msg, undo, warn){
 }
 $('#searchInput').addEventListener('input',e=>{ query=e.target.value.trim(); $('#searchClear').style.display=query?'block':'none'; render(); });
 $('#searchClear').onclick=()=>{ $('#searchInput').value=''; query=''; $('#searchClear').style.display='none'; render(); };
-$('#modeSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; mode=b.dataset.mode; document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x===b)); render(); });
+$('#modeSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; mode=b.dataset.mode; localStorage.setItem(LS.mode,mode); document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x===b)); render(); });
+document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on', x.dataset.mode===mode));
 
 const ov=$('#settingsOv');
 $('#settingsBtn').onclick=()=>{ $('#boardKeyInput').value=boardKey; $('#fbConfigInput').value=localStorage.getItem(LS.cfg)||''; updateConn(); ov.classList.add('show'); };
