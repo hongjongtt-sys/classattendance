@@ -107,6 +107,18 @@
   .name.match{background:var(--accent-weak); color:var(--accent); padding:1px 5px}
   .sep{color:#C7CEDA; margin:0 5px; user-select:none}
   .pdone{font-size:12px; font-weight:700; color:var(--done)}
+  .iconbtn.tmpl{display:none}
+  .sheet-wide{max-width:680px}
+  .tmpl-tabs{display:flex; flex-wrap:wrap; gap:6px; margin-bottom:12px}
+  .tmpl-tabs button{border:1px solid var(--line); background:var(--surface); border-radius:9px; padding:7px 11px; font:inherit; font-size:13px; font-weight:700; color:var(--ink-2); cursor:pointer}
+  .tmpl-tabs button.on{background:var(--ink); border-color:var(--ink); color:#fff}
+  .tmpl-tabs button.add{color:var(--accent); border-color:var(--accent-weak)}
+  .tmpl-meta{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
+  .tmpl-meta label{font-size:12.5px; font-weight:700; color:var(--ink-2); display:flex; flex-direction:column; gap:4px}
+  .tmpl-meta input{border:1px solid var(--line); border-radius:9px; background:var(--surface-2); padding:9px 10px; font:inherit; font-size:14px; color:var(--ink)}
+  .tmpl-day{border:1px solid var(--line-2); border-radius:11px; padding:10px; margin-bottom:10px}
+  .tmpl-day-h{display:flex; align-items:center; justify-content:space-between; font-size:14px; font-weight:800; margin-bottom:8px}
+  .tmpl-day-h button{border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:5px 10px; font:inherit; font-size:12.5px; font-weight:700; color:var(--accent); cursor:pointer}
   .editday{margin-left:auto; width:22px; height:22px; border:1px solid var(--line); background:var(--surface); border-radius:6px; cursor:pointer; color:var(--ink-2); font-size:13px; font-weight:800; line-height:1; display:grid; place-items:center; padding:0}
   .editday:hover{border-color:var(--accent); color:var(--accent)}
   .day.empty .editday{opacity:.85}
@@ -171,6 +183,7 @@
       <span class="mnav"><button class="navbtn" id="prevM" aria-label="이전 달">‹</button><span class="month-label" id="monthLabel"></span><button class="navbtn" id="nextM" aria-label="다음 달">›</button></span>
       <div class="prog"><div class="bar"><i id="barFill"></i></div><span class="pct" id="pctLabel">0 / 0</span></div>
       <button class="iconbtn" id="lockBtn"></button>
+      <button class="iconbtn tmpl" id="tmplBtn" aria-label="요일 기본표">📅 기본표</button>
       <button class="iconbtn gear" id="settingsBtn" aria-label="설정">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -220,6 +233,21 @@
   </div>
 </div>
 
+<div class="ov" id="tmplOv">
+  <div class="sheet sheet-wide">
+    <h2>요일 기본표</h2>
+    <p class="desc">요일별 시간표를 한 번 짜두면 매주 자동 적용됩니다. 학기가 바뀌면 <b>+ 새 기본표</b>에 <b>적용 시작일</b>을 정해 추가하세요(예전 달은 예전 표 그대로 유지). 특정 날만 다르면 달력에서 그 날짜만 따로 편집하면 됩니다.</p>
+    <div class="tmpl-tabs" id="tmplTabs"></div>
+    <div class="tmpl-meta">
+      <label>이름 <input id="tmplName" type="text" placeholder="예: 1학기"></label>
+      <label>적용 시작일 <input id="tmplFrom" type="date"></label>
+    </div>
+    <div id="tmplDays"></div>
+    <div class="row"><button class="btn ghost" id="tmplCancel">닫기</button><button class="btn primary" id="tmplSave">저장</button></div>
+    <div class="row"><button class="btn danger" id="tmplDelete">이 기본표 삭제</button></div>
+  </div>
+</div>
+
 <div class="ov" id="editorOv">
   <div class="sheet">
     <h2 id="editorTitle">일정 편집</h2>
@@ -241,7 +269,7 @@ import { getFirestore, doc, onSnapshot, setDoc, deleteField }
    ============================================================ */
 const YEAR_START = 2026;  // 처음 보여줄 연도
 const MONTH_START = 6;    // 처음 보여줄 월(1~12) — 화면의 ◀▶로 다른 달 이동 가능
-const ADMIN_PIN = "20100666"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
+const ADMIN_PIN = "2026"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
 const MY_NAME = "노홍종";  // 자율일 때 들어갈 본인 이름
 
 /* ★ 배포 시 필수 ★ Firebase 콘솔의 firebaseConfig를 아래에 JSON으로 채우세요.
@@ -276,7 +304,17 @@ const SEED = {
 const TAG_LABEL = {club:'동아리', self:'자율'};
 function activeClub(){ return (Array.isArray(clubRoster) && clubRoster.length) ? clubRoster : CLUB_TEACHERS; }
 function rosterOf(type){ return type==='club'?activeClub() : type==='self'?[MY_NAME] : []; }
-function periodsFor(iso){ return (schedule && schedule[iso]) || SEED[iso] || null; } // 화면입력(Firebase) 우선
+function activeTemplate(iso){ // 시작일이 iso 이하인 것 중 가장 최근 것
+  let best=null;
+  for(const id in templates){ const t=templates[id]; if(t && t.from && t.from<=iso){ if(!best || t.from>best.from) best=t; } }
+  return best;
+}
+function periodsFor(iso){
+  if(schedule && schedule[iso]) return schedule[iso];     // ① 날짜별 예외 우선
+  const t=activeTemplate(iso);                            // ② 요일 기본표(학기)
+  if(t && t.days){ const [y,m,d]=iso.split('-').map(Number); const wd=weekdayYMD(y,m,d); if(t.days[wd] && t.days[wd].length) return t.days[wd]; }
+  return SEED[iso] || null;                               // ③ 코드 시드
+}
 
 /* ---- 달력(월~금, 주말 제외) : 현재 보는 달을 ◀▶로 바꿈 ---- */
 const WD_KO=['월','화','수','목','금'];
@@ -325,7 +363,7 @@ function allItems(){ // 현재 보는 달 기준
    상태 + Firebase
    ============================================================ */
 const LS={cfg:'attnc_cfg', board:'attnc_board', cache:'attnc_cache_', admin:'attnc_admin', mode:'attnc_mode'};
-let checked={}, types={}, schedule={}, clubRoster=null, db=null, unsub=null, online=false;
+let checked={}, types={}, schedule={}, templates={}, clubRoster=null, db=null, unsub=null, online=false;
 let boardKey=localStorage.getItem(LS.board)||'exam-2026-1-final';
 let query='', mode=localStorage.getItem(LS.mode)||'pending';
 let admin=localStorage.getItem(LS.admin)==='1';
@@ -333,8 +371,8 @@ let admin=localStorage.getItem(LS.admin)==='1';
 const $=s=>document.querySelector(s);
 const el=(t,c)=>{const e=document.createElement(t); if(c)e.className=c; return e;};
 
-function loadCache(){ try{const c=localStorage.getItem(LS.cache+boardKey); if(c){const o=JSON.parse(c)||{}; checked=o.checked||{}; types=o.types||{}; schedule=o.schedule||{}; clubRoster=o.clubRoster||null;}}catch{} }
-function saveCache(){ try{localStorage.setItem(LS.cache+boardKey,JSON.stringify({checked,types,schedule,clubRoster}));}catch{} }
+function loadCache(){ try{const c=localStorage.getItem(LS.cache+boardKey); if(c){const o=JSON.parse(c)||{}; checked=o.checked||{}; types=o.types||{}; schedule=o.schedule||{}; templates=o.templates||{}; clubRoster=o.clubRoster||null;}}catch{} }
+function saveCache(){ try{localStorage.setItem(LS.cache+boardKey,JSON.stringify({checked,types,schedule,templates,clubRoster}));}catch{} }
 
 function activeCfg(){
   const raw=localStorage.getItem(LS.cfg);
@@ -351,7 +389,7 @@ function connectFirebase(){
     const app=initializeApp(cfg,'attnc-'+Date.now());
     db=getFirestore(app);
     unsub=onSnapshot(doc(db,'attendance_boards',boardKey), snap=>{ online=true; updateConn();
-      const d=snap.exists()?snap.data():{}; checked=d.checked||{}; types=d.types||{}; schedule=d.schedule||{}; clubRoster=d.clubTeachers||null; saveCache(); render();
+      const d=snap.exists()?snap.data():{}; checked=d.checked||{}; types=d.types||{}; schedule=d.schedule||{}; templates=d.templates||{}; clubRoster=d.clubTeachers||null; saveCache(); render();
     }, err=>{ online=false; updateConn('연결 오류: '+err.code); });
   }catch{ updateConn('초기화 실패'); }
 }
@@ -399,6 +437,31 @@ function parseTeachers(str){
   return units;
 }
 function teachersToString(t){ return (t||[]).map(u=> Array.isArray(u)?'('+u.join(', ')+')':u).join(', '); }
+// 편집 행 컨테이너 → 교시 배열
+function collectRows(container){
+  const out=[];
+  for(const r of container.querySelectorAll('.edrow')){
+    const praw=r.querySelector('.ed-p').value.trim(); if(!praw) continue;
+    const p=parseInt(praw,10); if(isNaN(p)) continue;
+    const pLabel=/[^0-9]/.test(praw)?praw:null;   // "6·7" 표기 보존
+    const kind=r.querySelector('.ed-kind').value;
+    const subj=r.querySelector('.ed-subj').value.trim()||(kind==='club'?'창체':kind==='self'?'자율':'');
+    if(kind==='club') out.push(pLabel?{p,pLabel,subj,pick:true}:{p,subj,pick:true});
+    else if(kind==='self') out.push(pLabel?{p,pLabel,subj,fixed:'self'}:{p,subj,fixed:'self'});
+    else { const t=parseTeachers(r.querySelector('.ed-t').value); const o={p,subj,t}; if(pLabel)o.pLabel=pLabel; out.push(o); }
+  }
+  out.sort((a,b)=>a.p-b.p); return out;
+}
+async function saveTemplate(id, obj){
+  templates[id]=obj; saveCache(); render();
+  try{ if(db) await setDoc(doc(db,'attendance_boards',boardKey),{templates:{[id]:obj}},{merge:true}); }
+  catch{ toast('저장 실패 — 인터넷/설정 확인',null,true); }
+}
+async function deleteTemplate(id){
+  delete templates[id]; saveCache(); render();
+  try{ if(db) await setDoc(doc(db,'attendance_boards',boardKey),{templates:{[id]:deleteField()}},{merge:true}); }
+  catch{ toast('삭제 실패',null,true); }
+}
 
 /* ============================================================
    렌더
@@ -532,12 +595,14 @@ function renderLock(){
     b.className='iconbtn admin';
     b.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>관리자';
     $('#settingsBtn').style.display='inline-flex';
-    $('#helpline').innerHTML='관리자 모드 — 창체 칸의 <b>동아리/자율</b>을 고르고, 나이스 확인 후 <b>이름을 누르면 완료</b>됩니다.';
+    $('#tmplBtn').style.display='inline-flex';
+    $('#helpline').innerHTML='관리자 모드 — <b>📅 기본표</b>로 요일별 시간표를 짜고, 창체는 달력에서 동아리/자율을 고르세요. 특정 날만 다르면 그 날짜의 ✎로 수정.';
   }else{
     b.className='iconbtn';
     b.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>조회 전용';
     $('#settingsBtn').style.display='none';
-    $('#helpline').innerHTML='<b>진하게 남은 본인 이름</b>이 아직 출결 마감이 안 된 수업입니다. (변경은 관리자만)';
+    $('#tmplBtn').style.display='none';
+    $('#helpline').innerHTML='<b>진하게 남은 본인 이름</b>이 아직 출결 확인이 안 된 교시입니다. (변경은 관리자만)';
   }
   render();
 }
@@ -642,24 +707,72 @@ $('#addRow').onclick=()=>$('#rows').appendChild(rowEl(null));
 $('#editorCancel').onclick=()=>edOv.classList.remove('show');
 edOv.addEventListener('click',e=>{ if(e.target===edOv) edOv.classList.remove('show'); });
 $('#editorSave').onclick=()=>{
-  const out=[];
-  for(const r of $('#rows').querySelectorAll('.edrow')){
-    const praw=r.querySelector('.ed-p').value.trim();
-    if(!praw) continue;
-    const p=parseInt(praw,10); if(isNaN(p)) continue;
-    const pLabel = /[^0-9]/.test(praw) ? praw : null;   // "6·7" 같은 표기 그대로 보존
-    const kind=r.querySelector('.ed-kind').value;
-    const subj=r.querySelector('.ed-subj').value.trim() || (kind==='club'?'창체':kind==='self'?'자율':'');
-    if(kind==='club'){ out.push(pLabel?{p,pLabel,subj,pick:true}:{p,subj,pick:true}); }
-    else if(kind==='self'){ out.push(pLabel?{p,pLabel,subj,fixed:'self'}:{p,subj,fixed:'self'}); }
-    else { const t=parseTeachers(r.querySelector('.ed-t').value); const o={p,subj,t}; if(pLabel)o.pLabel=pLabel; out.push(o); }
-  }
-  out.sort((a,b)=>a.p-b.p);
+  const out=collectRows($('#rows'));
   saveDay(edIso, out);
   edOv.classList.remove('show');
-  toast(out.length?'저장됨':'일정 비움');
+  toast(out.length?'저장됨':'예외 제거 · 기본표 적용');
 };
-$('#editorDelete').onclick=()=>{ if(!confirm('이 날짜 일정을 전부 삭제할까요?'))return; saveDay(edIso, []); edOv.classList.remove('show'); toast('삭제됨'); };
+$('#editorDelete').onclick=()=>{ if(!confirm('이 날짜만의 예외를 삭제합니다. (요일 기본표가 있으면 그쪽으로 돌아갑니다) 계속할까요?'))return; saveDay(edIso, []); edOv.classList.remove('show'); toast('예외 삭제됨'); };
+
+/* ===== 요일 기본표 편집기 ===== */
+const tmplOv=$('#tmplOv');
+const WD_FULL=['월요일','화요일','수요일','목요일','금요일'];
+let curTmplId=null;
+function newTmplId(){ return 't'+Date.now(); }
+function todayISO(){ const d=new Date(); return isoOf(d.getFullYear(), d.getMonth()+1, d.getDate()); }
+function buildTmplDays(daysObj){
+  const wrap=$('#tmplDays'); wrap.innerHTML='';
+  for(let wd=0; wd<5; wd++){
+    const sec=el('div','tmpl-day');
+    const h=el('div','tmpl-day-h'); h.innerHTML=`<span>${WD_FULL[wd]}</span>`;
+    const add=el('button'); add.textContent='+ 교시';
+    const rows=el('div','rows'); rows.dataset.wd=wd;
+    add.onclick=()=>rows.appendChild(rowEl(null));
+    h.appendChild(add); sec.appendChild(h); sec.appendChild(rows);
+    const list=(daysObj&&daysObj[wd])||[];
+    list.forEach(p=>rows.appendChild(rowEl(p)));
+    wrap.appendChild(sec);
+  }
+}
+function renderTmplTabs(){
+  const tabs=$('#tmplTabs'); tabs.innerHTML='';
+  const ids=Object.keys(templates).sort((a,b)=>(templates[a].from||'').localeCompare(templates[b].from||''));
+  for(const id of ids){ const t=templates[id]; const b=el('button',id===curTmplId?'on':'');
+    b.textContent=`${t.name||'기본표'} (${t.from||'?'}~)`; b.onclick=()=>loadTmpl(id); tabs.appendChild(b); }
+  const add=el('button','add'); add.textContent='+ 새 기본표'; add.onclick=()=>loadTmpl(newTmplId()); tabs.appendChild(add);
+}
+function loadTmpl(id){
+  curTmplId=id;
+  const t=templates[id]||{from:todayISO(),name:'',days:{}};
+  $('#tmplName').value=t.name||'';
+  $('#tmplFrom').value=t.from||todayISO();
+  buildTmplDays(t.days||{});
+  renderTmplTabs();
+}
+function openTemplates(){
+  if(!admin){ toast('관리자만 편집할 수 있어요'); return; }
+  const ids=Object.keys(templates).sort((a,b)=>(templates[b].from||'').localeCompare(templates[a].from||''));
+  loadTmpl(ids[0]||newTmplId());
+  tmplOv.classList.add('show');
+}
+$('#tmplBtn').onclick=openTemplates;
+$('#tmplCancel').onclick=()=>tmplOv.classList.remove('show');
+tmplOv.addEventListener('click',e=>{ if(e.target===tmplOv) tmplOv.classList.remove('show'); });
+$('#tmplSave').onclick=()=>{
+  const from=$('#tmplFrom').value;
+  if(!from){ toast('적용 시작일을 정해주세요',null,true); return; }
+  const name=$('#tmplName').value.trim()||'기본표';
+  const days={};
+  document.querySelectorAll('#tmplDays .rows').forEach(c=>{ const arr=collectRows(c); if(arr.length) days[c.dataset.wd]=arr; });
+  saveTemplate(curTmplId, {from,name,days});
+  renderTmplTabs(); toast('기본표 저장됨');
+};
+$('#tmplDelete').onclick=()=>{
+  if(!templates[curTmplId]){ tmplOv.classList.remove('show'); return; }
+  if(!confirm('이 기본표를 삭제할까요?'))return;
+  deleteTemplate(curTmplId);
+  const ids=Object.keys(templates); loadTmpl(ids[0]||newTmplId()); toast('기본표 삭제됨');
+};
 
 /* 시작 */
 loadCache(); renderLock(); connectFirebase();
