@@ -116,9 +116,13 @@
   .tmpl-meta{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:14px}
   .tmpl-meta label{font-size:12.5px; font-weight:700; color:var(--ink-2); display:flex; flex-direction:column; gap:4px}
   .tmpl-meta input{border:1px solid var(--line); border-radius:9px; background:var(--surface-2); padding:9px 10px; font:inherit; font-size:14px; color:var(--ink)}
-  .tmpl-day{border:1px solid var(--line-2); border-radius:11px; padding:10px; margin-bottom:10px}
-  .tmpl-day-h{display:flex; align-items:center; justify-content:space-between; font-size:14px; font-weight:800; margin-bottom:8px}
-  .tmpl-day-h button{border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:5px 10px; font:inherit; font-size:12.5px; font-weight:700; color:var(--accent); cursor:pointer}
+  .wd-tabs{display:flex; gap:6px; margin-bottom:12px}
+  .wd-tabs button{flex:1; border:1px solid var(--line); background:var(--surface); border-radius:9px; padding:9px 0; font:inherit; font-weight:800; font-size:14px; color:var(--ink-2); cursor:pointer}
+  .wd-tabs button.on{background:var(--accent); border-color:var(--accent); color:#fff}
+  .tmpl-pane{display:none}
+  .tmpl-pane.show{display:block}
+  .addrow-btn{width:100%; border:1px dashed var(--line); background:var(--surface-2); color:var(--accent); border-radius:10px; padding:11px; font:inherit; font-size:14px; font-weight:800; cursor:pointer}
+  .addrow-btn:hover{border-color:var(--accent)}
   .editday{margin-left:auto; width:22px; height:22px; border:1px solid var(--line); background:var(--surface); border-radius:6px; cursor:pointer; color:var(--ink-2); font-size:13px; font-weight:800; line-height:1; display:grid; place-items:center; padding:0}
   .editday:hover{border-color:var(--accent); color:var(--accent)}
   .day.empty .editday{opacity:.85}
@@ -242,6 +246,7 @@
       <label>이름 <input id="tmplName" type="text" placeholder="예: 1학기"></label>
       <label>적용 시작일 <input id="tmplFrom" type="date"></label>
     </div>
+    <div class="wd-tabs" id="wdTabs"></div>
     <div id="tmplDays"></div>
     <div class="row"><button class="btn ghost" id="tmplCancel">닫기</button><button class="btn primary" id="tmplSave">저장</button></div>
     <div class="row"><button class="btn danger" id="tmplDelete">이 기본표 삭제</button></div>
@@ -717,22 +722,32 @@ $('#editorDelete').onclick=()=>{ if(!confirm('이 날짜만의 예외를 삭제�
 /* ===== 요일 기본표 편집기 ===== */
 const tmplOv=$('#tmplOv');
 const WD_FULL=['월요일','화요일','수요일','목요일','금요일'];
-let curTmplId=null;
+let curTmplId=null, tmplWd=0;
 function newTmplId(){ return 't'+Date.now(); }
 function todayISO(){ const d=new Date(); return isoOf(d.getFullYear(), d.getMonth()+1, d.getDate()); }
+function renderWdTabs(){
+  const t=$('#wdTabs'); t.innerHTML='';
+  ['월','화','수','목','금'].forEach((lab,wd)=>{
+    const b=el('button',wd===tmplWd?'on':''); b.textContent=lab;
+    b.onclick=()=>{ tmplWd=wd;
+      document.querySelectorAll('#tmplDays .tmpl-pane').forEach(p=>p.classList.toggle('show', +p.dataset.wd===wd));
+      document.querySelectorAll('#wdTabs button').forEach((x,i)=>x.classList.toggle('on',i===wd));
+    };
+    t.appendChild(b);
+  });
+}
 function buildTmplDays(daysObj){
   const wrap=$('#tmplDays'); wrap.innerHTML='';
   for(let wd=0; wd<5; wd++){
-    const sec=el('div','tmpl-day');
-    const h=el('div','tmpl-day-h'); h.innerHTML=`<span>${WD_FULL[wd]}</span>`;
-    const add=el('button'); add.textContent='+ 교시';
+    const pane=el('div','tmpl-pane'+(wd===tmplWd?' show':'')); pane.dataset.wd=wd;
     const rows=el('div','rows'); rows.dataset.wd=wd;
-    add.onclick=()=>rows.appendChild(rowEl(null));
-    h.appendChild(add); sec.appendChild(h); sec.appendChild(rows);
-    const list=(daysObj&&daysObj[wd])||[];
-    list.forEach(p=>rows.appendChild(rowEl(p)));
-    wrap.appendChild(sec);
+    ((daysObj&&daysObj[wd])||[]).forEach(p=>rows.appendChild(rowEl(p)));
+    const add=el('button','addrow-btn'); add.textContent='+ 교시 추가';
+    add.onclick=()=>rows.appendChild(rowEl(null));   // 한 칸만 추가 (기존 칸 보존)
+    pane.appendChild(rows); pane.appendChild(add);
+    wrap.appendChild(pane);
   }
+  renderWdTabs();
 }
 function renderTmplTabs(){
   const tabs=$('#tmplTabs'); tabs.innerHTML='';
@@ -751,6 +766,7 @@ function loadTmpl(id){
 }
 function openTemplates(){
   if(!admin){ toast('관리자만 편집할 수 있어요'); return; }
+  tmplWd=0;
   const ids=Object.keys(templates).sort((a,b)=>(templates[b].from||'').localeCompare(templates[a].from||''));
   loadTmpl(ids[0]||newTmplId());
   tmplOv.classList.add('show');
