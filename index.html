@@ -275,7 +275,7 @@ import { getFirestore, doc, onSnapshot, setDoc, deleteField }
    ============================================================ */
 const YEAR_START = 2026;  // 처음 보여줄 연도
 const MONTH_START = 6;    // 처음 보여줄 월(1~12) — 화면의 ◀▶로 다른 달 이동 가능
-const ADMIN_PIN = "2026"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
+const ADMIN_PIN = "20100666"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
 const MY_NAME = "노홍종";  // 자율일 때 들어갈 본인 이름
 
 /* ★ 배포 시 필수 ★ Firebase 콘솔의 firebaseConfig를 아래에 JSON으로 채우세요.
@@ -552,7 +552,7 @@ function render(){
 
       const names=el('div','names');
       if(visible.length===0){
-        if(allDone) names.innerHTML='<span class="pdone">✓ 전원 완료</span>';
+        if(allDone) names.innerHTML='<span class="pdone">✓ 완료</span>';
         // 유형 미선택 등으로 명단이 없으면 비워둠
       } else {
         visible.forEach((u,i)=>{
