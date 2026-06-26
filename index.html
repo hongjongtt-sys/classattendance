@@ -474,7 +474,10 @@ function collectRows(container){
     const pLabel = nums.length>1 ? nums.join('·') : null;  // 두 교시 이상이면 통합 표기
     const kind=r.querySelector('.ed-kind').value;
     const subj=r.querySelector('.ed-subj').value.trim()||(kind==='club'?'창체':kind==='self'?'자율':'');
-    if(kind==='club'){ const t=parseTeachers(r.querySelector('.ed-t').value); const o=pLabel?{p,pLabel,subj,pick:true}:{p,subj,pick:true}; if(t.length)o.t=t; out.push(o); }
+    if(kind==='club'){ const t=parseTeachers(r.querySelector('.ed-t').value);
+      const o=pLabel?{p,pLabel,subj,pick:true}:{p,subj,pick:true};
+      if(t.length && teachersToString(t)!==teachersToString(activeClub())) o.t=t;  // 공통과 다를 때만 그날 저장
+      out.push(o); }
     else if(kind==='self') out.push(pLabel?{p,pLabel,subj,fixed:'self'}:{p,subj,fixed:'self'});
     else { const t=parseTeachers(r.querySelector('.ed-t').value); const o={p,subj,t}; if(pLabel)o.pLabel=pLabel; out.push(o); }
   }
@@ -720,6 +723,8 @@ let edIso=null;
 function rowEl(per){
   const r=el('div','edrow');
   const kind = per ? (per.fixed?'self':per.pick?'club':'normal') : 'normal';
+  const clubDefault = teachersToString(activeClub());
+  const tval = (per && per.t) ? teachersToString(per.t) : (kind==='club' ? clubDefault : '');
   r.innerHTML=`
     <div class="edtop">
       <input class="ed-p" type="text" inputmode="numeric" placeholder="교시" value="${per?(per.pLabel||per.p):''}">
@@ -731,11 +736,12 @@ function rowEl(per){
       <button class="ed-del" title="이 교시 삭제">✕</button>
     </div>
     <input class="ed-subj" type="text" placeholder="과목명" value="${per?per.subj:''}">
-    <input class="ed-t" type="text" placeholder="교사 (쉼표 구분, 팀은 괄호)" value="${per&&per.t?teachersToString(per.t):''}">`;
+    <input class="ed-t" type="text" placeholder="교사 (쉼표 구분, 팀은 괄호)" value="${tval}">`;
   r.querySelector('.ed-kind').value=kind;
   const sync=()=>{ const k=r.querySelector('.ed-kind').value; const tin=r.querySelector('.ed-t');
     tin.style.display = (k==='self')?'none':'';
-    tin.placeholder = (k==='club') ? '이 날만 동아리 명단 (비우면 공통 명단)' : '교사 (쉼표 구분, 팀은 괄호)';
+    tin.placeholder = (k==='club') ? '동아리 명단 (그대로 두면 공통, 고치면 이 날만)' : '교사 (쉼표 구분, 팀은 괄호)';
+    if(k==='club' && !tin.value.trim()) tin.value=clubDefault;   // 창체로 바꾸면 공통 명단 채움
     const sj=r.querySelector('.ed-subj'); if(k==='club'&&!sj.value)sj.value='창체'; if(k==='self'&&!sj.value)sj.value='자율';
   };
   r.querySelector('.ed-kind').onchange=sync; sync();
