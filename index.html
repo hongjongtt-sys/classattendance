@@ -280,7 +280,7 @@ import { getFirestore, doc, onSnapshot, setDoc, deleteField }
    ============================================================ */
 const YEAR_START = 2026;  // 처음 보여줄 연도
 const MONTH_START = 6;    // 처음 보여줄 월(1~12) — 화면의 ◀▶로 다른 달 이동 가능
-const ADMIN_PIN = "20100666"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
+const ADMIN_PIN = "2026"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
 const MY_NAME = "노홍종";  // 자율일 때 들어갈 본인 이름
 
 /* ★ 배포 시 필수 ★ Firebase 콘솔의 firebaseConfig를 아래에 JSON으로 채우세요.
@@ -351,11 +351,16 @@ function buildDay(iso){
   return periods.map(per=>{
     const slotId=`${base}_p${per.p}`;
     if(per.fixed || per.pick){
-      const type = per.fixed || types[slotId] || null;
-      const roster = rosterOf(type);
+      let type = per.fixed || null;
+      const hasCustom = !!(per.pick && per.t && per.t.length);
+      if(!type && per.pick) type = hasCustom ? 'club' : (types[slotId] || null);  // 그날 직접 명단=동아리
+      let roster;
+      if(type==='club') roster = hasCustom ? per.t : activeClub();
+      else if(type==='self') roster = [MY_NAME];
+      else roster = [];
       const units = roster.map((u,i)=>{ const names=Array.isArray(u)?u:[u];
         return { id:`${slotId}_${type}_${i}`, names, label:names.join('·'), team:names.length>1 }; });
-      return { p:per.p, pLabel:per.pLabel||null, subj:per.subj, slotId, pick:!!per.pick, fixed:per.fixed||null, type, tag:type, units };
+      return { p:per.p, pLabel:per.pLabel||null, subj:per.subj, slotId, pick:!!per.pick, fixed:per.fixed||null, type, tag:type, units, hasCustom };
     }
     const units = (per.t||[]).map((u,i)=>{ const names=Array.isArray(u)?u:[u];
       return { id:`${slotId}_u${i}`, names, label:names.join('·'), team:names.length>1 }; });
@@ -469,7 +474,7 @@ function collectRows(container){
     const pLabel = nums.length>1 ? nums.join('·') : null;  // 두 교시 이상이면 통합 표기
     const kind=r.querySelector('.ed-kind').value;
     const subj=r.querySelector('.ed-subj').value.trim()||(kind==='club'?'창체':kind==='self'?'자율':'');
-    if(kind==='club') out.push(pLabel?{p,pLabel,subj,pick:true}:{p,subj,pick:true});
+    if(kind==='club'){ const t=parseTeachers(r.querySelector('.ed-t').value); const o=pLabel?{p,pLabel,subj,pick:true}:{p,subj,pick:true}; if(t.length)o.t=t; out.push(o); }
     else if(kind==='self') out.push(pLabel?{p,pLabel,subj,fixed:'self'}:{p,subj,fixed:'self'});
     else { const t=parseTeachers(r.querySelector('.ed-t').value); const o={p,subj,t}; if(pLabel)o.pLabel=pLabel; out.push(o); }
   }
@@ -558,7 +563,9 @@ function render(){
       pl.innerHTML=`<span class="pp">${per.pLabel||per.p}교시</span><span class="ps">${per.subj}</span>`;
       // 태그 / 선택기
       if(per.pick){
-        if(admin && !filtering){
+        if(per.hasCustom){
+          pl.insertAdjacentHTML('beforeend', `<span class="tag club">동아리·직접</span>`);
+        } else if(admin && !filtering){
           const pick=el('div','pick');
           pick.innerHTML=`<button data-type="club" class="${per.type==='club'?'on':''}">동아리</button><button data-type="self" class="${per.type==='self'?'on':''}">자율</button>`;
           pick.querySelectorAll('button').forEach(b=> b.onclick=()=>setType(per.slotId,b.dataset.type));
@@ -726,8 +733,9 @@ function rowEl(per){
     <input class="ed-subj" type="text" placeholder="과목명" value="${per?per.subj:''}">
     <input class="ed-t" type="text" placeholder="교사 (쉼표 구분, 팀은 괄호)" value="${per&&per.t?teachersToString(per.t):''}">`;
   r.querySelector('.ed-kind').value=kind;
-  const sync=()=>{ const k=r.querySelector('.ed-kind').value;
-    r.querySelector('.ed-t').style.display = k==='normal'?'':'none';
+  const sync=()=>{ const k=r.querySelector('.ed-kind').value; const tin=r.querySelector('.ed-t');
+    tin.style.display = (k==='self')?'none':'';
+    tin.placeholder = (k==='club') ? '이 날만 동아리 명단 (비우면 공통 명단)' : '교사 (쉼표 구분, 팀은 괄호)';
     const sj=r.querySelector('.ed-subj'); if(k==='club'&&!sj.value)sj.value='창체'; if(k==='self'&&!sj.value)sj.value='자율';
   };
   r.querySelector('.ed-kind').onchange=sync; sync();
