@@ -278,8 +278,9 @@ import { getFirestore, doc, onSnapshot, setDoc, deleteField }
 /* ============================================================
    ★ 기본 설정 — 여기만 고치면 됩니다
    ============================================================ */
-const YEAR_START = 2026;  // 처음 보여줄 연도
-const MONTH_START = 6;    // 처음 보여줄 월(1~12) — 화면의 ◀▶로 다른 달 이동 가능
+const _today = new Date();
+const YEAR_START = _today.getFullYear();   // 오늘이 포함된 연도로 자동 시작
+const MONTH_START = _today.getMonth() + 1; // 오늘이 포함된 월로 자동 시작 (◀▶로 이동 가능)
 const ADMIN_PIN = "20100666"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
 const MY_NAME = "노홍종";  // 자율일 때 들어갈 본인 이름
 
