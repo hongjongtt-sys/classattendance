@@ -115,6 +115,20 @@
   .pdone{font-size:12px; font-weight:700; color:var(--done)}
   .iconbtn.tmpl{display:none}
   .iconbtn.clubs{display:none}
+  .iconbtn.side{display:none}
+  .clubside{position:fixed; top:0; right:0; bottom:0; width:300px; background:var(--surface); border-left:1px solid var(--line); z-index:36; overflow:auto; padding:14px 14px 40px; display:none}
+  body.sideon .clubside{display:block}
+  body.sideon{padding-right:300px}
+  @media (max-width:1000px){ body.sideon{padding-right:0} body.sideon .clubside{display:none} }
+  .cs-head{display:flex; align-items:center; justify-content:space-between; position:sticky; top:-14px; background:var(--surface); padding:2px 0 8px; margin:-2px 0 8px; border-bottom:1px solid var(--line-2)}
+  .cs-head b{font-size:14px; font-weight:800}
+  .cs-x{border:1px solid var(--line); background:var(--surface); border-radius:7px; width:26px; height:26px; cursor:pointer; color:var(--ink-2); font-size:13px; font-weight:800}
+  .cs-x:hover{border-color:var(--accent); color:var(--accent)}
+  .cs-empty{font-size:12.5px; color:var(--ink-2); line-height:1.6}
+  .cs-item{border:1px solid var(--line-2); border-radius:10px; padding:9px 10px; margin-bottom:8px}
+  .cs-item .cs-name{font-weight:800; font-size:13px}
+  .cs-item .cs-teach{font-size:12px; color:var(--club); font-weight:700; margin:2px 0 3px}
+  .cs-item .cs-stu{font-size:11.5px; color:var(--ink-2); line-height:1.65; word-break:keep-all}
   .clubrow{display:flex; flex-direction:column; gap:7px; margin-bottom:10px; padding:11px; background:var(--surface-2); border:1px solid var(--line-2); border-radius:11px}
   .clubrow .ctop{display:flex; gap:7px; align-items:center}
   .clubrow .c-name{flex:1; font-weight:800}
@@ -206,6 +220,7 @@
       <span class="mnav"><button class="navbtn" id="prevM" aria-label="이전 달">‹</button><span class="month-label" id="monthLabel"></span><button class="navbtn" id="nextM" aria-label="다음 달">›</button></span>
       <div class="prog"><div class="bar"><i id="barFill"></i></div><span class="pct" id="pctLabel">0 / 0</span></div>
       <button class="iconbtn" id="lockBtn"></button>
+      <button class="iconbtn side" id="sideBtn" aria-label="동아리표">📋 표</button>
       <button class="iconbtn clubs" id="clubsBtn" aria-label="동아리 정보">👥 동아리</button>
       <button class="iconbtn tmpl" id="tmplBtn" aria-label="요일 기본표">📅 기본표</button>
       <button class="iconbtn gear" id="settingsBtn" aria-label="설정">
@@ -242,6 +257,7 @@
 </main>
 
 <div class="toasts" id="toasts"></div>
+<aside class="clubside" id="clubside"></aside>
 
 <div class="ov" id="settingsOv">
   <div class="sheet">
@@ -414,10 +430,25 @@ let checked={}, types={}, schedule={}, templates={}, clubs=[], db=null, unsub=nu
 let boardKey=localStorage.getItem(LS.board)||'exam-2026-1-final';
 let query='', mode=localStorage.getItem(LS.mode)||'pending';
 let expanded=new Set();   // 펼쳐 둔 완료 날짜(이 기기에서만)
+let sideWanted=true;      // 동아리표 사이드 패널 표시 여부(관리자)
 let admin=localStorage.getItem(LS.admin)==='1';
 
 const $=s=>document.querySelector(s);
 const el=(t,c)=>{const e=document.createElement(t); if(c)e.className=c; return e;};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function renderClubSide(){
+  const box=$('#clubside'); if(!box) return;
+  let h='<div class="cs-head"><b>동아리 정보</b><button class="cs-x" id="csX" title="닫기">✕</button></div>';
+  if(!clubs.length){ h+='<p class="cs-empty">등록된 동아리가 없습니다.<br>상단 <b>👥 동아리</b>에서 추가하세요.</p>'; }
+  else for(const c of clubs){
+    h+='<div class="cs-item"><div class="cs-name">'+esc(c.name||'(이름없음)')+'</div>';
+    if(c.teachers&&c.teachers.length) h+='<div class="cs-teach">'+esc(c.teachers.join(' · '))+'</div>';
+    if(c.students&&c.students.length) h+='<div class="cs-stu">'+esc(c.students.join(', '))+'</div>';
+    h+='</div>';
+  }
+  box.innerHTML=h;
+  const x=$('#csX'); if(x) x.onclick=()=>{ sideWanted=false; document.body.classList.remove('sideon'); };
+}
 
 function loadCache(){ try{const c=localStorage.getItem(LS.cache+boardKey); if(c){const o=JSON.parse(c)||{}; checked=o.checked||{}; types=o.types||{}; schedule=o.schedule||{}; templates=o.templates||{}; clubs=o.clubs||[];}}catch{} }
 function saveCache(){ try{localStorage.setItem(LS.cache+boardKey,JSON.stringify({checked,types,schedule,templates,clubs}));}catch{} }
@@ -539,6 +570,7 @@ function render(){
 
   const q=query, filtering=!!q;
   const clubMap=clubByLabel();
+  renderClubSide();
   renderSummary(q, items);
 
   const {g}=buildGrid(curYear,curMonth);
@@ -696,6 +728,8 @@ function renderLock(){
     $('#settingsBtn').style.display='inline-flex';
     $('#tmplBtn').style.display='inline-flex';
     $('#clubsBtn').style.display='inline-flex';
+    $('#sideBtn').style.display='inline-flex';
+    if(sideWanted) document.body.classList.add('sideon');
     $('#helpline').innerHTML='관리자 모드 — <b>📅 기본표</b>로 요일별 시간표를 짜고, 창체는 달력에서 동아리/자율을 고르세요. 특정 날만 다르면 그 날짜의 ✎로 수정.';
   }else{
     b.className='iconbtn';
@@ -703,6 +737,8 @@ function renderLock(){
     $('#settingsBtn').style.display='none';
     $('#tmplBtn').style.display='none';
     $('#clubsBtn').style.display='none';
+    $('#sideBtn').style.display='none';
+    document.body.classList.remove('sideon');
     $('#helpline').innerHTML='<b>진하게 남은 본인 이름</b>이 아직 출결 확인이 안 된 교시입니다. (변경은 관리자만)';
   }
   render();
@@ -736,6 +772,7 @@ function shiftMonth(delta){
 }
 $('#prevM').onclick=()=>shiftMonth(-1);
 $('#nextM').onclick=()=>shiftMonth(1);
+$('#sideBtn').onclick=()=>{ sideWanted=!document.body.classList.contains('sideon'); document.body.classList.toggle('sideon', sideWanted); };
 $('#searchInput').addEventListener('input',e=>{ query=e.target.value.trim(); $('#searchClear').style.display=query?'block':'none'; render(); });
 $('#searchClear').onclick=()=>{ $('#searchInput').value=''; query=''; $('#searchClear').style.display='none'; render(); };
 $('#modeSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return; mode=b.dataset.mode; localStorage.setItem(LS.mode,mode); document.querySelectorAll('#modeSeg button').forEach(x=>x.classList.toggle('on',x===b)); render(); });
