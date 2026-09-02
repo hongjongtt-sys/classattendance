@@ -129,6 +129,12 @@
   .cs-item .cs-name{font-weight:800; font-size:13px}
   .cs-item .cs-teach{font-size:12px; color:var(--club); font-weight:700; margin:2px 0 3px}
   .cs-item .cs-stu{font-size:11.5px; color:var(--ink-2); line-height:1.65; word-break:keep-all}
+  .cs-tabs{display:flex; gap:5px; margin-bottom:10px}
+  .cs-tabs button{flex:1; border:1px solid var(--line); background:var(--surface); border-radius:8px; padding:7px 0; font:inherit; font-size:12.5px; font-weight:800; color:var(--ink-2); cursor:pointer}
+  .cs-tabs button.on{background:var(--accent); border-color:var(--accent); color:#fff}
+  .cs-srow{display:flex; justify-content:space-between; gap:8px; align-items:baseline; padding:6px 2px; border-bottom:1px solid var(--line-2)}
+  .cs-srow .cs-s{font-size:12.5px; font-weight:700; color:var(--ink); white-space:nowrap}
+  .cs-srow .cs-meta{font-size:11px; font-weight:700; color:var(--club); text-align:right; word-break:keep-all}
   .clubrow{display:flex; flex-direction:column; gap:7px; margin-bottom:10px; padding:11px; background:var(--surface-2); border:1px solid var(--line-2); border-radius:11px}
   .clubrow .ctop{display:flex; gap:7px; align-items:center}
   .clubrow .c-name{flex:1; font-weight:800}
@@ -320,7 +326,7 @@ import { getFirestore, doc, onSnapshot, setDoc, deleteField }
 const _today = new Date();
 const YEAR_START = _today.getFullYear();   // 오늘이 포함된 연도로 자동 시작
 const MONTH_START = _today.getMonth() + 1; // 오늘이 포함된 월로 자동 시작 (◀▶로 이동 가능)
-const ADMIN_PIN = "20100666"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
+const ADMIN_PIN = "2026"; // 관리자 비밀번호(출결 체크 잠금 해제) — 원하는 값으로 변경
 const MY_NAME = "노홍종";  // 자율일 때 들어갈 본인 이름
 
 /* ★ 배포 시 필수 ★ Firebase 콘솔의 firebaseConfig를 아래에 JSON으로 채우세요.
@@ -436,18 +442,41 @@ let admin=localStorage.getItem(LS.admin)==='1';
 const $=s=>document.querySelector(s);
 const el=(t,c)=>{const e=document.createElement(t); if(c)e.className=c; return e;};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let sideTab='byclub';   // 'byclub' | 'bystu'
 function renderClubSide(){
   const box=$('#clubside'); if(!box) return;
   let h='<div class="cs-head"><b>동아리 정보</b><button class="cs-x" id="csX" title="닫기">✕</button></div>';
-  if(!clubs.length){ h+='<p class="cs-empty">등록된 동아리가 없습니다.<br>상단 <b>👥 동아리</b>에서 추가하세요.</p>'; }
-  else for(const c of clubs){
-    h+='<div class="cs-item"><div class="cs-name">'+esc(c.name||'(이름없음)')+'</div>';
-    if(c.teachers&&c.teachers.length) h+='<div class="cs-teach">'+esc(c.teachers.join(' · '))+'</div>';
-    if(c.students&&c.students.length) h+='<div class="cs-stu">'+esc(c.students.join(', '))+'</div>';
-    h+='</div>';
+  h+='<div class="cs-tabs"><button data-t="byclub" class="'+(sideTab==='byclub'?'on':'')+'">동아리별</button><button data-t="bystu" class="'+(sideTab==='bystu'?'on':'')+'">학생별</button></div>';
+
+  if(!clubs.length){ h+='<p class="cs-empty">등록된 동아리가 없습니다.<br>상단 <b>👥 동아리</b>에서 추가하세요.</p>'; box.innerHTML=h; wireSide(box); return; }
+
+  if(sideTab==='byclub'){
+    for(const c of clubs){
+      h+='<div class="cs-item"><div class="cs-name">'+esc(c.name||'(이름없음)')+'</div>';
+      if(c.teachers&&c.teachers.length) h+='<div class="cs-teach">'+esc(c.teachers.join(' · '))+'</div>';
+      if(c.students&&c.students.length) h+='<div class="cs-stu">'+esc(c.students.join(', '))+'</div>';
+      h+='</div>';
+    }
+  } else {
+    // 학생별: 모든 학생을 학번순 정렬 + 동아리·교사 매칭
+    const rows=[];
+    for(const c of clubs){ for(const s of (c.students||[])){
+      const num=(String(s).match(/\d+/)||[''])[0];
+      rows.push({ s, num, club:c.name||'', teach:(c.teachers||[]).join('·') });
+    }}
+    rows.sort((a,b)=>{ const na=parseInt(a.num,10), nb=parseInt(b.num,10);
+      if(!isNaN(na)&&!isNaN(nb)&&na!==nb) return na-nb;
+      return String(a.s).localeCompare(String(b.s),'ko'); });
+    if(!rows.length){ h+='<p class="cs-empty">배정 학생이 입력된 동아리가 없습니다.</p>'; }
+    for(const r of rows){
+      h+='<div class="cs-srow"><span class="cs-s">'+esc(r.s)+'</span><span class="cs-meta">'+esc(r.club)+(r.teach?' · '+esc(r.teach):'')+'</span></div>';
+    }
   }
-  box.innerHTML=h;
-  const x=$('#csX'); if(x) x.onclick=()=>{ sideWanted=false; document.body.classList.remove('sideon'); };
+  box.innerHTML=h; wireSide(box);
+}
+function wireSide(box){
+  const x=box.querySelector('#csX'); if(x) x.onclick=()=>{ sideWanted=false; document.body.classList.remove('sideon'); };
+  box.querySelectorAll('.cs-tabs button').forEach(b=> b.onclick=()=>{ sideTab=b.dataset.t; renderClubSide(); });
 }
 
 function loadCache(){ try{const c=localStorage.getItem(LS.cache+boardKey); if(c){const o=JSON.parse(c)||{}; checked=o.checked||{}; types=o.types||{}; schedule=o.schedule||{}; templates=o.templates||{}; clubs=o.clubs||[];}}catch{} }
