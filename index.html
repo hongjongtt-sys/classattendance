@@ -462,7 +462,9 @@ function renderClubSide(){
     const rows=[];
     for(const c of clubs){ for(const s of (c.students||[])){
       const num=(String(s).match(/\d+/)||[''])[0];
-      rows.push({ s, num, club:c.name||'', teach:(c.teachers||[]).join('·') });
+      const ts=(c.teachers||[]).filter(Boolean);
+      const teach = ts.length>1 ? '('+ts.join('·')+')' : (ts[0]||'');
+      rows.push({ s, num, club:c.name||'', teach });
     }}
     rows.sort((a,b)=>{ const na=parseInt(a.num,10), nb=parseInt(b.num,10);
       if(!isNaN(na)&&!isNaN(nb)&&na!==nb) return na-nb;
