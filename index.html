@@ -1237,6 +1237,7 @@ function renderDaily(){
   $('#dDate').value=iso;
   const sd=studentData();
   const body=$('#dailyBody');
+  const _ow=body.querySelector('.daily-wrap'); const _sx=_ow?_ow.scrollLeft:0, _sy=_ow?_ow.scrollTop:0;  // 스크롤 유지
   const periods=(new Date(y,m-1,d).getDay()>=1 && new Date(y,m-1,d).getDay()<=5) ? buildDay(iso) : null;
   if(!periods || !periods.length){
     body.innerHTML='<div class="dempty">이 날은 시간표(수업)가 없습니다. 화살표나 달력으로 다른 날을 선택하세요.</div>';
@@ -1268,6 +1269,7 @@ function renderDaily(){
   }
   html+='</tbody></table></div>';
   body.innerHTML=html;
+  const _nw=body.querySelector('.daily-wrap'); if(_nw){ _nw.scrollLeft=_sx; _nw.scrollTop=_sy; }  // 스크롤 복원
   const arr=[...unitset], dn=arr.filter(id=>checked[id]).length;
   $('#barFill').style.width=arr.length?(dn/arr.length*100)+'%':'0%';
   $('#pctLabel').textContent=`${dn} / ${arr.length}`;
