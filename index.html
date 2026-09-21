@@ -208,6 +208,45 @@
   .mini{font-size:12px; color:var(--ink-2); margin-top:10px; line-height:1.55}
   .mini code{background:var(--surface-2); padding:1px 5px; border-radius:5px; font-size:11.5px}
 
+  /* 뷰 전환 + 일별 마감 */
+  .viewseg{display:inline-flex; border:1px solid var(--line); border-radius:10px; overflow:hidden; background:var(--surface); height:34px}
+  .viewseg button{border:0; background:transparent; padding:0 13px; font:inherit; font-size:13px; font-weight:800; color:var(--ink-2); cursor:pointer}
+  .viewseg button.on{background:var(--ink); color:#fff}
+  #daily{display:none}
+  body.view-daily #daily{display:block}
+  body.view-daily .cal,body.view-daily .wkhead,body.view-daily #allClear{display:none}
+  body.view-daily .filterbar,body.view-daily .legend,body.view-daily .summary,body.view-daily .helpline{display:none}
+  body.view-daily .mnav{display:none}
+  body.view-daily .clubside{display:none}
+  body.view-daily.sideon{padding-right:0}
+  .dtool{display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:12px}
+  .dtool .navbtn{width:32px;height:34px;font-size:16px}
+  .dtool .dlabel{font-size:15px; font-weight:800; min-width:96px; text-align:center; font-variant-numeric:tabular-nums}
+  .dtool input[type=date]{height:34px; border:1px solid var(--line); border-radius:9px; background:var(--surface); padding:0 9px; font:inherit; font-size:13px; color:var(--ink)}
+  .dtool .today-btn,.dtool .rosterbtn{height:34px; border:1px solid var(--line); background:var(--surface); border-radius:9px; padding:0 12px; font:inherit; font-size:12.5px; font-weight:700; color:var(--ink-2); cursor:pointer}
+  .dtool .rosterbtn{margin-left:auto}
+  .dtool .today-btn:hover,.dtool .rosterbtn:hover{border-color:var(--accent); color:var(--accent)}
+  .daily-wrap{overflow:auto; border:1px solid var(--line); border-radius:12px; background:var(--surface); max-height:calc(100vh - 200px)}
+  .dtable{border-collapse:separate; border-spacing:0; width:100%; font-size:12px}
+  .dtable th,.dtable td{border-bottom:1px solid var(--line-2); border-right:1px solid var(--line-2); padding:5px 7px; white-space:nowrap; text-align:center; height:30px}
+  .dtable thead th{position:sticky; top:0; background:var(--surface-2); z-index:2; font-weight:800; color:var(--ink-2); font-size:11.5px}
+  .dtable thead th small{display:block; font-weight:600; color:#9AA6B6; font-size:10px; margin-top:1px}
+  .dtable .stu{position:sticky; left:0; background:var(--surface); z-index:1; text-align:left; font-weight:700; min-width:92px; font-variant-numeric:tabular-nums}
+  .dtable thead .stu{z-index:3; background:var(--surface-2)}
+  .dtable tbody tr:hover .stu{background:var(--surface-2)}
+  .dtable tr.rdone .stu{color:var(--ghost); font-weight:500}
+  .dcell{cursor:pointer; color:var(--ink); font-weight:600}
+  .dcell.tamgu{font-weight:700}
+  .dcell.common{color:var(--ink-2); font-weight:500}
+  .dcell.club{color:var(--club); font-weight:700}
+  .dcell.self{color:var(--self); font-weight:700}
+  .dcell.done{color:var(--ghost)!important; text-decoration:line-through; text-decoration-color:#CBD3DE; font-weight:500; background:var(--done-bg)}
+  .dcell.warn{color:var(--warn)}
+  .dcell.na{color:#CDD4DE; cursor:default}
+  .dcell:hover:not(.na):not(.done){background:var(--accent-weak)}
+  .dempty{padding:44px 18px; text-align:center; color:var(--ink-2); font-size:14px; background:var(--surface); border:1px solid var(--line); border-radius:12px}
+  .dhint{font-size:12px; color:var(--ink-2); margin:9px 2px 0}
+
   @media (max-width:720px){
     .wrap{padding-left:10px; padding-right:10px}
     .cal,.wkhead{gap:5px}
@@ -224,6 +263,7 @@
     <div class="titlerow">
       <h1>출결 확인 달력</h1>
       <span class="mnav"><button class="navbtn" id="prevM" aria-label="이전 달">‹</button><span class="month-label" id="monthLabel"></span><button class="navbtn" id="nextM" aria-label="다음 달">›</button></span>
+      <span class="viewseg" id="viewSeg" style="display:none"><button data-v="month" class="on">월별</button><button data-v="daily">일별 마감</button></span>
       <div class="prog"><div class="bar"><i id="barFill"></i></div><span class="pct" id="pctLabel">0 / 0</span></div>
       <button class="iconbtn" id="lockBtn"></button>
       <button class="iconbtn side" id="sideBtn" aria-label="동아리 정보">📋 동아리 정보</button>
@@ -260,6 +300,21 @@
     <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5"/></svg></div>
     <b>모든 교시의 출결 확인이 완료되었습니다</b><p>남은 교시가 없습니다.</p>
   </div>
+
+  <div id="daily">
+    <div class="dtool">
+      <button class="navbtn" id="dPrevM" title="이전 달">«</button>
+      <button class="navbtn" id="dPrev" title="이전 날">‹</button>
+      <span class="dlabel" id="dLabel"></span>
+      <button class="navbtn" id="dNext" title="다음 날">›</button>
+      <button class="navbtn" id="dNextM" title="다음 달">»</button>
+      <input type="date" id="dDate">
+      <button class="today-btn" id="dToday">오늘</button>
+      <button class="rosterbtn" id="rosterBtn">📋 명단·과목</button>
+    </div>
+    <div id="dailyBody"></div>
+    <p class="dhint">칸을 누르면 그 과목 담당교사가 <b>마감 완료</b>로 처리됩니다(월별 탭 교사명도 함께 연해짐). 같은 과목을 듣는 학생은 한 명만 눌러도 함께 완료돼요.</p>
+  </div>
 </main>
 
 <div class="toasts" id="toasts"></div>
@@ -275,6 +330,20 @@
     <div class="row"><button class="btn ghost" id="settingsCancel">취소</button><button class="btn primary" id="settingsSave">저장</button></div>
     <div class="row"><button class="btn danger" id="resetAll">완료표시 전체 초기화</button></div>
     <p class="mini">Firestore 규칙 예시: <code>match /attendance_boards/{id} { allow read, write: if true; }</code></p>
+  </div>
+</div>
+
+<div class="ov" id="rosterOv">
+  <div class="sheet sheet-wide">
+    <h2>학생 명단 · 선택과목 · 탐구 교사</h2>
+    <p class="desc">아래에 붙여넣고 저장하면 <b>일별 마감표</b>가 만들어집니다. 새 학기엔 여기만 새로 붙여넣으면 됩니다. (동아리 명단·담당교사는 <b>👥 동아리</b>에서 관리)</p>
+    <div class="field"><label>① 학생 선택과목 <span class="hint">(한 줄에 한 학생 — 학번 이름, 이어서 과목_블록 … 탭/여러 칸 구분)</span></label>
+      <textarea id="rosterStu" placeholder="20301 강채범	법과 사회_A	독서 토론과 글쓰기_B	윤리와 사상_C	경제_D	경제수학_K"></textarea></div>
+    <div class="field"><label>② 탐구 블록별 담당교사 <span class="hint">(탐구 A~K 줄 아래에 과목(교사t)_반 — 요일마다 다르면 교사를 두 명 다 적으면 됨)</span></label>
+      <textarea id="rosterBlk" placeholder="탐구 A&#10;세포와 물질대사(임은순t)_1반&#10;법과 사회(김형근t)_2반 …"></textarea></div>
+    <p class="mini" id="rosterStat"></p>
+    <div class="row"><button class="btn ghost" id="rosterCancel">취소</button><button class="btn primary" id="rosterSave">저장</button></div>
+    <div class="row"><button class="btn ghost" id="rosterSeed">예시(현재 학기) 불러오기</button></div>
   </div>
 </div>
 
@@ -358,6 +427,153 @@ const SEED = {
   // ],
 };
 
+/* ============================================================
+   일별 마감용 시드 — 학생 선택과목 & 탐구 블록별 교사
+   (관리자 → 📋 명단·과목 에서 붙여넣기로 교체 가능. 새 학기엔 여기만 갈아끼움)
+   ============================================================ */
+const SEED_STUDENT_TEXT = [
+  "20301 강채범\t법과 사회_A\t독서 토론과 글쓰기_B\t윤리와 사상_C\t경제_D\t경제수학_K",
+  "20302 곽동현\t법과 사회_A\t한국 지리 탐구_B\t경제_C\t윤리와 사상_D\t경제수학_K",
+  "20303 김건호\t법과 사회_A\t한국 지리 탐구_B\t윤리와 사상_C\t경제_D\t경제수학_K",
+  "20304 김동영\t동아시아 역사 기행_A\t독서 토론과 글쓰기_B\t법과 사회_C\t윤리와 사상_D\t경제수학_K",
+  "20305 김민석\t동아시아 역사 기행_A\t한국 지리 탐구_B\t윤리와 사상_C\t경제_D\t경제수학_K",
+  "20306 김정우\t법과 사회_A\t한국 지리 탐구_B\t경제_C\t윤리와 사상_D\t경제수학_K",
+  "20307 김중현\t법과 사회_A\t독서 토론과 글쓰기_B\t윤리와 사상_C\t경제_D\t경제수학_K",
+  "20308 김현중\t동아시아 역사 기행_A\t한국 지리 탐구_B\t법과 사회_C\t경제_D\t경제수학_K",
+  "20309 박건호\t세포와 물질대사_A\t지구시스템과학_B\t역학과 에너지_C\t물질과 에너지_D\t미적분Ⅱ_K",
+  "20310 박우근\t법과 사회_A\t한국 지리 탐구_B\t경제_C\t독서 토론과 글쓰기_D\t미적분Ⅱ_K",
+  "20311 배한진\t한국 지리 탐구_A\t동아시아 역사 기행_B\t법과 사회_C\t윤리와 사상_D\t경제수학_K",
+  "20312 손준호\t법과 사회_A\t지구시스템과학_B\t경제_C\t독서 토론과 글쓰기_D\t경제수학_K",
+  "20313 신민수\t세포와 물질대사_A\t역학과 에너지_B\t지구시스템과학_C\t독서 토론과 글쓰기_D\t미적분Ⅱ_K",
+  "20314 양시훈\t법과 사회_A\t동아시아 역사 기행_B\t경제_C\t윤리와 사상_D\t경제수학_K",
+  "20315 오기창\t동아시아 역사 기행_A\t한국 지리 탐구_B\t법과 사회_C\t경제_D\t미적분Ⅱ_K",
+  "20316 유정근\t한국 지리 탐구_A\t동아시아 역사 기행_B\t윤리와 사상_C\t경제_D\t경제수학_K",
+  "20317 유진우\t법과 사회_A\t동아시아 역사 기행_B\t경제_C\t윤리와 사상_D\t경제수학_K",
+  "20318 이경률\t동아시아 역사 기행_A\t한국 지리 탐구_B\t법과 사회_C\t경제_D\t경제수학_K",
+  "20319 임교남\t한국 지리 탐구_A\t독서 토론과 글쓰기_B\t윤리와 사상_C\t경제_D\t경제수학_K",
+  "20320 장성웅\t한국 지리 탐구_A\t독서 토론과 글쓰기_B\t법과 사회_C\t세포와 물질대사_D\t경제수학_K",
+  "20321 정세현\t법과 사회_A\t독서 토론과 글쓰기_B\t윤리와 사상_C\t경제_D\t경제수학_K",
+  "20322 정해윤\t세포와 물질대사_A\t지구시스템과학_B\t물질과 에너지_C\t역학과 에너지_D\t미적분Ⅱ_K",
+  "20323 차우혁\t지구시스템과학_A\t세포와 물질대사_B\t물질과 에너지_C\t역학과 에너지_D\t미적분Ⅱ_K",
+  "20324 홍현서\t지구시스템과학_A\t역학과 에너지_B\t물질과 에너지_C\t세포와 물질대사_D\t미적분Ⅱ_K",
+  "20325 황우찬\t한국 지리 탐구_A\t독서 토론과 글쓰기_B\t윤리와 사상_C\t경제_D\t경제수학_K",
+  "20326 정혁준\t지구시스템과학_A\t역학과 에너지_B\t물질과 에너지_C\t독서 토론과 글쓰기_D\t미적분Ⅱ_K",
+].join('\n');
+
+const SEED_BLOCK_TEXT = [
+  "탐구 A",
+  "세포와 물질대사(임은순t)_1반",
+  "법과 사회(김형근t)_2반",
+  "물질과 에너지(정재훈t)_3반",
+  "지구시스템과학(정인준t)_4반",
+  "한국 지리 탐구(신원우t)_5반",
+  "동아시아 역사 기행(김준우t)_6반",
+  "",
+  "탐구 B",
+  "독서 토론과 글쓰기(박정호t)_1반",
+  "세포와 물질대사(임은순t)_2반",
+  "한국 지리 탐구(신원우t)_3반",
+  "동아시아 역사 기행(김준우t)_4반",
+  "지구시스템과학(정인준t)_5반",
+  "역학과 에너지(최강현t)_6반",
+  "",
+  "탐구 C",
+  "물질과 에너지(정재훈t)_1반",
+  "역학과 에너지(김상혁t)_2반",
+  "법과 사회(김형근t)_3반",
+  "경제(서경원t)_4반",
+  "윤리와 사상_5반(이은형t_월, 금)",
+  "(이진선t_화)",
+  "지구시스템과학(정인준t)_6반",
+  "",
+  "탐구 D",
+  "경제(서경원t)_1반",
+  "윤리와 사상_2반(이은형t_월, 목)",
+  "(이진선t_금)",
+  "역학과 에너지(김상혁t)_3반",
+  "물질과 에너지(정재훈t)_4반",
+  "세포와 물질대사(임은순t)_5반",
+  "독서 토론과 글쓰기(박정호t)_6반",
+  "",
+  "탐구 K",
+  "경제수학(최현성t)_3반",
+  "미적분Ⅱ(장혜숙t)_6반",
+].join('\n');
+
+function normKey(s){ return String(s==null?'':s).replace(/\s+/g,'').trim(); }
+// 학생 표 → {students:[{num,name}], picks:{num:{A:과목,...}}}
+function parseStudentText(txt){
+  const students=[], picks={};
+  for(const raw of String(txt||'').split('\n')){
+    const line=raw.replace(/\r/g,'').replace(/ /g,' ').trimEnd(); if(!line.trim()) continue;
+    let cells = line.includes('\t') ? line.split('\t') : line.split(/\s{2,}/);
+    cells = cells.map(c=>c.trim()).filter(Boolean);
+    if(!cells.length) continue;
+    const mnum=cells[0].match(/(\d{3,})/); if(!mnum) continue;
+    const num=mnum[1]; const name=cells[0].replace(mnum[1],'').trim();
+    students.push({num,name}); const p={};
+    for(let i=1;i<cells.length;i++){
+      const cell=cells[i]; const bm=cell.match(/_([ABCDK])(?=\(|_|\b|$)/); if(!bm) continue;
+      const subj=cell.slice(0,bm.index).trim(); if(subj) p[bm[1]]=subj;
+    }
+    picks[num]=p;
+  }
+  return {students,picks};
+}
+// 탐구 블록 → {A:{normKey:{name,teachers:[]}}, ...}
+function parseBlockText(txt){
+  const map={}; let cur=null, lastKey=null;
+  for(const raw of String(txt||'').split('\n')){
+    const line=raw.replace(/\r/g,'').replace(/ /g,' ').trim(); if(!line) continue;
+    const hm=line.match(/^탐구\s*([ABCDK])\b/);
+    if(hm){ cur=hm[1]; if(!map[cur])map[cur]={}; lastKey=null; continue; }
+    if(!cur) continue;
+    const teachers=[...line.matchAll(/([가-힣]{2,5})t(?![가-힣])/g)].map(m=>m[1]);
+    let subj=line.split('(')[0].trim().replace(/_[0-9]*반$/,'').replace(/_[ABCDK]$/,'').trim();
+    if(subj){
+      const k=normKey(subj);
+      if(!map[cur][k]) map[cur][k]={name:subj,teachers:[]};
+      teachers.forEach(t=>{ if(!map[cur][k].teachers.includes(t)) map[cur][k].teachers.push(t); });
+      lastKey=k;
+    } else if(teachers.length && lastKey){
+      teachers.forEach(t=>{ if(!map[cur][lastKey].teachers.includes(t)) map[cur][lastKey].teachers.push(t); });
+    }
+  }
+  return map;
+}
+let _sd=null, _sdKey='';
+function studentData(){
+  const st=(pasteStudents&&pasteStudents.trim())?pasteStudents:SEED_STUDENT_TEXT;
+  const bl=(pasteBlocks&&pasteBlocks.trim())?pasteBlocks:SEED_BLOCK_TEXT;
+  const key=st+'\u0000'+bl;
+  if(_sd&&_sdKey===key) return _sd;
+  const {students,picks}=parseStudentText(st);
+  _sd={students,picks,blockMap:parseBlockText(bl)}; _sdKey=key; return _sd;
+}
+// (날짜, 교시객체, 학번) → {label, unit, kind}
+function resolveCell(iso, per, stuNum, sd){
+  const subjRaw=per.subj||'';
+  const bm=subjRaw.match(/탐구\s*([ABCDK])/);
+  if(bm){
+    const block=bm[1];
+    const pick=sd.picks[stuNum]&&sd.picks[stuNum][block];
+    if(!pick) return {label:'',unit:null,kind:'none'};
+    const entry=sd.blockMap[block]&&sd.blockMap[block][normKey(pick)];
+    let unit=null;
+    if(entry){ const cand=entry.teachers||[]; unit=per.units.find(u=>u.names.some(n=>cand.includes(n)))||null; }
+    return {label:pick,unit,kind:'tamgu'};
+  }
+  if(per.type==='self'||per.fixed==='self'){ const unit=per.units.find(u=>u.names.includes(MY_NAME))||per.units[0]||null; return {label:'자율',unit,kind:'self'}; }
+  if(per.type==='club'){
+    const club=(clubs||[]).find(c=>(c.students||[]).some(s=>String(s).includes(stuNum)));
+    if(club){ const ts=(club.teachers||[]).filter(Boolean); const unit=per.units.find(u=>u.names.some(n=>ts.includes(n)))||null; return {label:club.name||'동아리',unit,kind:'club'}; }
+    return {label:'동아리?',unit:null,kind:'club'};
+  }
+  if(per.pick||subjRaw==='창체') return {label:'창체',unit:null,kind:'none'};  // 유형 미정
+  const unit=per.units[0]||null;
+  return {label:subjRaw,unit,kind:'common'};
+}
+
 const TAG_LABEL = {club:'동아리', self:'자율'};
 function activeClub(){ // 동아리 탭의 담당교사들이 곧 창체 동아리 명단 (한 동아리 담당 여럿이면 한 칸=팀)
   if(Array.isArray(clubs) && clubs.length){
@@ -431,10 +647,12 @@ function allItems(){ // 현재 보는 달 기준
 /* ============================================================
    상태 + Firebase
    ============================================================ */
-const LS={cfg:'attnc_cfg', board:'attnc_board', cache:'attnc_cache_', admin:'attnc_admin', mode:'attnc_mode'};
-let checked={}, types={}, schedule={}, templates={}, clubs=[], db=null, unsub=null, online=false;
+const LS={cfg:'attnc_cfg', board:'attnc_board', cache:'attnc_cache_', admin:'attnc_admin', mode:'attnc_mode', view:'attnc_view'};
+let checked={}, types={}, schedule={}, templates={}, clubs=[], pasteStudents='', pasteBlocks='', db=null, unsub=null, online=false;
 let boardKey=localStorage.getItem(LS.board)||'exam-2026-1-final';
 let query='', mode=localStorage.getItem(LS.mode)||'pending';
+let view=localStorage.getItem(LS.view)||'month';   // 'month' | 'daily'
+let dailyISO=todayISO();                            // 일별 마감 탭에서 보는 날짜
 let expanded=new Set();   // 펼쳐 둔 완료 날짜(이 기기에서만)
 let sideWanted=true;      // 동아리표 사이드 패널 표시 여부(관리자)
 let admin=localStorage.getItem(LS.admin)==='1';
@@ -481,8 +699,8 @@ function wireSide(box){
   box.querySelectorAll('.cs-tabs button').forEach(b=> b.onclick=()=>{ sideTab=b.dataset.t; renderClubSide(); });
 }
 
-function loadCache(){ try{const c=localStorage.getItem(LS.cache+boardKey); if(c){const o=JSON.parse(c)||{}; checked=o.checked||{}; types=o.types||{}; schedule=o.schedule||{}; templates=o.templates||{}; clubs=o.clubs||[];}}catch{} }
-function saveCache(){ try{localStorage.setItem(LS.cache+boardKey,JSON.stringify({checked,types,schedule,templates,clubs}));}catch{} }
+function loadCache(){ try{const c=localStorage.getItem(LS.cache+boardKey); if(c){const o=JSON.parse(c)||{}; checked=o.checked||{}; types=o.types||{}; schedule=o.schedule||{}; templates=o.templates||{}; clubs=o.clubs||[]; pasteStudents=o.pasteStudents||''; pasteBlocks=o.pasteBlocks||''; _sd=null;}}catch{} }
+function saveCache(){ try{localStorage.setItem(LS.cache+boardKey,JSON.stringify({checked,types,schedule,templates,clubs,pasteStudents,pasteBlocks}));}catch{} }
 
 function activeCfg(){
   const raw=localStorage.getItem(LS.cfg);
@@ -499,7 +717,7 @@ function connectFirebase(){
     const app=initializeApp(cfg,'attnc-'+Date.now());
     db=getFirestore(app);
     unsub=onSnapshot(doc(db,'attendance_boards',boardKey), snap=>{ online=true; updateConn();
-      const d=snap.exists()?snap.data():{}; checked=d.checked||{}; types=d.types||{}; schedule=decSchedule(d.schedule||{}); templates=decTemplates(d.templates||{}); clubs=Array.isArray(d.clubs)?d.clubs:[]; saveCache(); render();
+      const d=snap.exists()?snap.data():{}; checked=d.checked||{}; types=d.types||{}; schedule=decSchedule(d.schedule||{}); templates=decTemplates(d.templates||{}); clubs=Array.isArray(d.clubs)?d.clubs:[]; pasteStudents=d.pasteStudents||''; pasteBlocks=d.pasteBlocks||''; _sd=null; saveCache(); render();
     }, err=>{ online=false; updateConn('연결 오류: '+err.code); });
   }catch{ updateConn('초기화 실패'); }
 }
@@ -593,6 +811,8 @@ async function deleteTemplate(id){
 const calEl=$('#cal');
 
 function render(){
+  document.body.classList.toggle('view-daily', view==='daily' && admin);
+  if(view==='daily' && admin){ renderDaily(); return; }
   $('#monthLabel').textContent=`${curYear}.${curMonth}`;
   const items=allItems();
   const total=items.length, done=items.filter(x=>checked[x.id]).length;
@@ -760,7 +980,8 @@ function renderLock(){
     $('#tmplBtn').style.display='inline-flex';
     $('#clubsBtn').style.display='inline-flex';
     $('#sideBtn').style.display='inline-flex';
-    if(sideWanted) document.body.classList.add('sideon');
+    $('#viewSeg').style.display='inline-flex';
+    if(sideWanted && view!=='daily') document.body.classList.add('sideon');
     $('#helpline').innerHTML='관리자 모드 — <b>📅 기본표</b>로 요일별 시간표를 짜고, 창체는 달력에서 동아리/자율을 고르세요. 특정 날만 다르면 그 날짜의 ✎로 수정.';
   }else{
     b.className='iconbtn';
@@ -769,6 +990,8 @@ function renderLock(){
     $('#tmplBtn').style.display='none';
     $('#clubsBtn').style.display='none';
     $('#sideBtn').style.display='none';
+    $('#viewSeg').style.display='none';
+    view='month'; document.body.classList.remove('view-daily');
     document.body.classList.remove('sideon');
     $('#helpline').innerHTML='<b>진하게 남은 본인 이름</b>이 아직 출결 확인이 안 된 교시입니다. (변경은 관리자만)';
   }
@@ -996,6 +1219,119 @@ $('#clubsSave').onclick=()=>{
   clubsOv.classList.remove('show');
   toast('동아리 정보 저장됨');
 };
+
+/* ===== 일별 마감 탭 ===== */
+const DOW=['월','화','수','목','금','토','일'];
+function periodHint(per){
+  if(/탐구\s*[ABCDK]/.test(per.subj||'')) return per.subj;
+  if(per.type==='self'||per.fixed==='self') return '자율';
+  if(per.type==='club') return '창체(동아리)';
+  if(per.pick||per.subj==='창체') return '창체';
+  return per.subj||'';
+}
+function renderDaily(){
+  const iso=dailyISO;
+  const [y,m,d]=iso.split('-').map(Number);
+  const wd=weekdayYMD(y,m,d);
+  $('#dLabel').textContent=`${m}/${d} (${DOW[(new Date(y,m-1,d).getDay()+6)%7]})`;
+  $('#dDate').value=iso;
+  const sd=studentData();
+  const body=$('#dailyBody');
+  const periods=(new Date(y,m-1,d).getDay()>=1 && new Date(y,m-1,d).getDay()<=5) ? buildDay(iso) : null;
+  if(!periods || !periods.length){
+    body.innerHTML='<div class="dempty">이 날은 시간표(수업)가 없습니다. 화살표나 달력으로 다른 날을 선택하세요.</div>';
+    $('#barFill').style.width='0%'; $('#pctLabel').textContent='0 / 0'; return;
+  }
+  const pers=periods.slice().sort((a,b)=>a.p-b.p);
+  const students=sd.students.slice().sort((a,b)=>String(a.num).localeCompare(String(b.num)));
+  if(!students.length){
+    body.innerHTML='<div class="dempty">학생 명단이 없습니다. 위 <b>📋 명단·과목</b>에서 붙여넣어 주세요.</div>';
+    $('#barFill').style.width='0%'; $('#pctLabel').textContent='0 / 0'; return;
+  }
+  const unitset=new Set();
+  let html='<div class="daily-wrap"><table class="dtable"><thead><tr><th class="stu">학생</th>';
+  for(const per of pers){ const hint=periodHint(per); html+=`<th>${esc(per.pLabel||per.p)}교시<small>${esc(hint)}</small></th>`; }
+  html+='</tr></thead><tbody>';
+  for(const stu of students){
+    const cells=pers.map(per=>resolveCell(iso,per,stu.num,sd));
+    let anyReal=false, allDone=true;
+    for(const r of cells){ if(r.unit) unitset.add(r.unit.id); if(r.kind!=='none'&&r.label){ anyReal=true; if(!(r.unit&&checked[r.unit.id])) allDone=false; } }
+    html+=`<tr class="${anyReal&&allDone?'rdone':''}"><td class="stu">${esc(stu.num)} ${esc(stu.name)}</td>`;
+    for(const r of cells){
+      if(!r.label){ html+='<td class="dcell na"></td>'; continue; }
+      const done=r.unit&&checked[r.unit.id];
+      const warn=r.label&&!r.unit&&r.kind!=='none'&&r.kind!=='common'?false:(r.label&&!r.unit&&r.kind!=='none');
+      let cls='dcell '+r.kind; if(done)cls+=' done'; if(r.kind==='none')cls+=' na'; else if(!r.unit)cls+=' warn';
+      html+=`<td class="${cls}" data-uid="${r.unit?esc(r.unit.id):''}" data-lbl="${esc(r.label)}">${esc(r.label)}</td>`;
+    }
+    html+='</tr>';
+  }
+  html+='</tbody></table></div>';
+  body.innerHTML=html;
+  const arr=[...unitset], dn=arr.filter(id=>checked[id]).length;
+  $('#barFill').style.width=arr.length?(dn/arr.length*100)+'%':'0%';
+  $('#pctLabel').textContent=`${dn} / ${arr.length}`;
+  body.querySelectorAll('.dcell').forEach(td=>{
+    if(td.classList.contains('na')) return;
+    td.onclick=()=>{
+      if(!admin){ toast('관리자만 마감할 수 있어요'); return; }
+      const uid=td.dataset.uid;
+      if(!uid){ toast(`'${td.dataset.lbl}' 담당교사를 시간표에서 못 찾았어요 — 기본표/명단을 확인하세요`,null,true); return; }
+      toggle(uid);
+    };
+  });
+}
+function shiftDay(delta){
+  let dt=new Date(dailyISO.slice(0,4), +dailyISO.slice(5,7)-1, +dailyISO.slice(8,10));
+  dt.setDate(dt.getDate()+delta);
+  let guard=0; while((dt.getDay()===0||dt.getDay()===6)&&guard++<7){ dt.setDate(dt.getDate()+(delta>=0?1:-1)); }
+  dailyISO=isoOf(dt.getFullYear(),dt.getMonth()+1,dt.getDate()); render();
+}
+function shiftDailyMonth(delta){
+  let y=+dailyISO.slice(0,4), m=+dailyISO.slice(5,7), d=+dailyISO.slice(8,10);
+  m+=delta; if(m<1){m=12;y--;} if(m>12){m=1;y++;}
+  const dim=new Date(y,m,0).getDate(); if(d>dim)d=dim;
+  dailyISO=isoOf(y,m,d); render();
+}
+$('#dPrev').onclick=()=>shiftDay(-1);
+$('#dNext').onclick=()=>shiftDay(1);
+$('#dPrevM').onclick=()=>shiftDailyMonth(-1);
+$('#dNextM').onclick=()=>shiftDailyMonth(1);
+$('#dToday').onclick=()=>{ dailyISO=todayISO(); render(); };
+$('#dDate').onchange=(e)=>{ if(e.target.value){ dailyISO=e.target.value; render(); } };
+
+$('#viewSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b)return;
+  view=b.dataset.v; localStorage.setItem(LS.view,view);
+  document.querySelectorAll('#viewSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  if(view==='daily') document.body.classList.remove('sideon');
+  else if(admin && sideWanted) document.body.classList.add('sideon');
+  render();
+});
+document.querySelectorAll('#viewSeg button').forEach(x=>x.classList.toggle('on', x.dataset.v===view));
+
+/* ===== 명단·과목 붙여넣기 ===== */
+const rosterOv=$('#rosterOv');
+function updateRosterStat(){
+  const s=parseStudentText($('#rosterStu').value); const b=parseBlockText($('#rosterBlk').value);
+  const nb=Object.values(b).reduce((a,o)=>a+Object.keys(o).length,0);
+  $('#rosterStat').textContent=`인식됨 — 학생 ${s.students.length}명 · 탐구 블록 ${Object.keys(b).length}개 · 과목 ${nb}개`;
+}
+$('#rosterBtn').onclick=()=>{ if(!admin){toast('관리자만 편집할 수 있어요');return;}
+  $('#rosterStu').value=pasteStudents||''; $('#rosterBlk').value=pasteBlocks||''; updateRosterStat(); rosterOv.classList.add('show'); };
+$('#rosterCancel').onclick=()=>rosterOv.classList.remove('show');
+rosterOv.addEventListener('click',e=>{ if(e.target===rosterOv) rosterOv.classList.remove('show'); });
+$('#rosterSeed').onclick=()=>{ $('#rosterStu').value=SEED_STUDENT_TEXT; $('#rosterBlk').value=SEED_BLOCK_TEXT; updateRosterStat(); };
+$('#rosterStu').addEventListener('input',updateRosterStat);
+$('#rosterBlk').addEventListener('input',updateRosterStat);
+$('#rosterSave').onclick=()=>{
+  pasteStudents=$('#rosterStu').value; pasteBlocks=$('#rosterBlk').value; _sd=null;
+  saveRoster(pasteStudents,pasteBlocks); rosterOv.classList.remove('show'); toast('명단·과목 저장됨');
+};
+async function saveRoster(stu,blk){
+  saveCache(); render();
+  try{ if(db) await setDoc(doc(db,'attendance_boards',boardKey),{pasteStudents:stu,pasteBlocks:blk},{merge:true}); }
+  catch(e){ console.error('saveRoster',e); toast('저장 실패 — 인터넷/설정 확인',null,true); }
+}
 
 /* 시작 */
 loadCache(); renderLock(); connectFirebase();
