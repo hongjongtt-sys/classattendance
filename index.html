@@ -256,6 +256,13 @@
   .subrow input:focus{outline:2px solid var(--accent-weak); border-color:var(--accent)}
   .subrow.on{background:#FCEFE3; border-color:#F0C9B6}
   .subempty{font-size:13px; color:var(--ink-2); padding:20px 4px; text-align:center}
+  .noclass.vac{color:var(--club); font-weight:800}
+  .vacrow{display:flex; gap:8px; align-items:center; margin-bottom:8px; padding:8px 9px; background:var(--surface-2); border:1px solid var(--line-2); border-radius:9px; flex-wrap:wrap}
+  .vacrow input[type=text]{flex:1; min-width:90px}
+  .vacrow input{border:1px solid var(--line); border-radius:8px; background:#fff; padding:8px 9px; font:inherit; font-size:13px; color:var(--ink)}
+  .vacrow .vtil{color:var(--ink-2)}
+  .vacrow .vdel{margin-left:auto; border:0; background:transparent; color:var(--warn); font-size:15px; font-weight:800; cursor:pointer}
+  .vacrow input:focus{outline:2px solid var(--accent-weak); border-color:var(--accent)}
 
   @media (max-width:720px){
     .wrap{padding-left:10px; padding-right:10px}
@@ -279,6 +286,7 @@
       <button class="iconbtn side" id="sideBtn" aria-label="동아리 정보">📋 동아리 정보</button>
       <button class="iconbtn clubs" id="clubsBtn" aria-label="동아리 정보">👥 동아리</button>
       <button class="iconbtn tmpl" id="tmplBtn" aria-label="요일 기본표">📅 기본표</button>
+      <button class="iconbtn tmpl" id="vacBtn" aria-label="방학·등교일">🏖 방학</button>
       <button class="iconbtn gear" id="settingsBtn" aria-label="설정">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
       </button>
@@ -341,6 +349,20 @@
     <div class="row"><button class="btn ghost" id="settingsCancel">취소</button><button class="btn primary" id="settingsSave">저장</button></div>
     <div class="row"><button class="btn danger" id="resetAll">완료표시 전체 초기화</button></div>
     <p class="mini">Firestore 규칙 예시: <code>match /attendance_boards/{id} { allow read, write: if true; }</code></p>
+  </div>
+</div>
+
+<div class="ov" id="vacOv">
+  <div class="sheet sheet-wide">
+    <h2>방학 · 등교일</h2>
+    <p class="desc">방학 기간을 정하면 그 기간 평일은 <b>수업 없음(방학)</b>으로 처리됩니다(진행률 집계에서도 제외). 그 안에 <b>등교일</b>을 찍으면 그날만 <b>평소 시간표대로</b> 수업이 떠요. 개학하면 자동으로 정상 복귀합니다.</p>
+    <h3 style="font-size:14px;font-weight:800;margin:6px 0 8px">방학 기간</h3>
+    <div id="vacRanges"></div>
+    <button class="btn ghost" id="vacAddRange" style="margin-top:2px">+ 방학 기간 추가</button>
+    <h3 style="font-size:14px;font-weight:800;margin:16px 0 8px">등교일 <span style="font-weight:500;color:var(--ink-2);font-size:12px">(방학 중에도 시간표대로 수업하는 날)</span></h3>
+    <div id="vacDays"></div>
+    <button class="btn ghost" id="vacAddDay" style="margin-top:2px">+ 등교일 추가</button>
+    <div class="row"><button class="btn ghost" id="vacCancel">취소</button><button class="btn primary" id="vacSave">저장</button></div>
   </div>
 </div>
 
@@ -610,11 +632,17 @@ function activeTemplate(iso){ // 시작일이 iso 이하인 것 중 가장 최�
   for(const id in templates){ const t=templates[id]; if(t && t.from && t.from<=iso){ if(!best || t.from>best.from) best=t; } }
   return best;
 }
-function periodsFor(iso){
-  if(schedule && schedule[iso]!==undefined) return schedule[iso];   // ① 날짜별 예외([]면 수업없음)
-  const t=activeTemplate(iso);                            // ② 요일 기본표(학기)
+function templatePeriods(iso){
+  const t=activeTemplate(iso);
   if(t && t.days){ const [y,m,d]=iso.split('-').map(Number); const wd=weekdayYMD(y,m,d); if(t.days[wd] && t.days[wd].length) return t.days[wd]; }
-  return SEED[iso] || null;                               // ③ 코드 시드
+  return SEED[iso] || null;
+}
+function inBreak(iso){ for(const b of (breaks||[])){ if(b && b.from && b.to && iso>=b.from && iso<=b.to) return b; } return null; }
+function periodsFor(iso){
+  if(schedule && schedule[iso]!==undefined) return schedule[iso];      // ① 날짜별 예외(✎, []면 수업없음)
+  if((schoolDays||[]).includes(iso)) return templatePeriods(iso);      // ② 등교일 → 기본표대로 (방학보다 우선)
+  if(inBreak(iso)) return [];                                          // ③ 방학 범위 → 수업 없음
+  return templatePeriods(iso);                                         // ④ 평소 기본표
 }
 
 /* ---- 달력(월~금, 주말 제외) : 현재 보는 달을 ◀▶로 바꿈 ---- */
@@ -671,7 +699,7 @@ function allItems(){ // 현재 보는 달 기준
    상태 + Firebase
    ============================================================ */
 const LS={cfg:'attnc_cfg', board:'attnc_board', cache:'attnc_cache_', admin:'attnc_admin', mode:'attnc_mode', view:'attnc_view'};
-let checked={}, types={}, schedule={}, templates={}, clubs=[], pasteStudents='', pasteBlocks='', subs={}, db=null, unsub=null, online=false;
+let checked={}, types={}, schedule={}, templates={}, clubs=[], pasteStudents='', pasteBlocks='', subs={}, breaks=[], schoolDays=[], db=null, unsub=null, online=false;
 let boardKey=localStorage.getItem(LS.board)||'exam-2026-1-final';
 let query='', mode=localStorage.getItem(LS.mode)||'pending';
 let view=localStorage.getItem(LS.view)||'month';   // 'month' | 'daily'
@@ -722,8 +750,8 @@ function wireSide(box){
   box.querySelectorAll('.cs-tabs button').forEach(b=> b.onclick=()=>{ sideTab=b.dataset.t; renderClubSide(); });
 }
 
-function loadCache(){ try{const c=localStorage.getItem(LS.cache+boardKey); if(c){const o=JSON.parse(c)||{}; checked=o.checked||{}; types=o.types||{}; schedule=o.schedule||{}; templates=o.templates||{}; clubs=o.clubs||[]; pasteStudents=o.pasteStudents||''; pasteBlocks=o.pasteBlocks||''; subs=o.subs||{}; _sd=null;}}catch{} }
-function saveCache(){ try{localStorage.setItem(LS.cache+boardKey,JSON.stringify({checked,types,schedule,templates,clubs,pasteStudents,pasteBlocks,subs}));}catch{} }
+function loadCache(){ try{const c=localStorage.getItem(LS.cache+boardKey); if(c){const o=JSON.parse(c)||{}; checked=o.checked||{}; types=o.types||{}; schedule=o.schedule||{}; templates=o.templates||{}; clubs=o.clubs||[]; pasteStudents=o.pasteStudents||''; pasteBlocks=o.pasteBlocks||''; subs=o.subs||{}; breaks=o.breaks||[]; schoolDays=o.schoolDays||[]; _sd=null;}}catch{} }
+function saveCache(){ try{localStorage.setItem(LS.cache+boardKey,JSON.stringify({checked,types,schedule,templates,clubs,pasteStudents,pasteBlocks,subs,breaks,schoolDays}));}catch{} }
 
 function activeCfg(){
   const raw=localStorage.getItem(LS.cfg);
@@ -740,7 +768,7 @@ function connectFirebase(){
     const app=initializeApp(cfg,'attnc-'+Date.now());
     db=getFirestore(app);
     unsub=onSnapshot(doc(db,'attendance_boards',boardKey), snap=>{ online=true; updateConn();
-      const d=snap.exists()?snap.data():{}; checked=d.checked||{}; types=d.types||{}; schedule=decSchedule(d.schedule||{}); templates=decTemplates(d.templates||{}); clubs=Array.isArray(d.clubs)?d.clubs:[]; pasteStudents=d.pasteStudents||''; pasteBlocks=d.pasteBlocks||''; subs=d.subs||{}; _sd=null; saveCache(); render();
+      const d=snap.exists()?snap.data():{}; checked=d.checked||{}; types=d.types||{}; schedule=decSchedule(d.schedule||{}); templates=decTemplates(d.templates||{}); clubs=Array.isArray(d.clubs)?d.clubs:[]; pasteStudents=d.pasteStudents||''; pasteBlocks=d.pasteBlocks||''; subs=d.subs||{}; breaks=Array.isArray(d.breaks)?d.breaks:[]; schoolDays=Array.isArray(d.schoolDays)?d.schoolDays:[]; _sd=null; saveCache(); render();
     }, err=>{ online=false; updateConn('연결 오류: '+err.code); });
   }catch{ updateConn('초기화 실패'); }
 }
@@ -862,7 +890,7 @@ function render(){
     }
     day.appendChild(head);
     if(!periods){ calEl.appendChild(day); continue; }
-    if(periods.length===0){ const nc=el('div','noclass'); nc.textContent='수업 없음'; day.appendChild(nc); calEl.appendChild(day); continue; }
+    if(periods.length===0){ const brk=inBreak(cell.iso); const nc=el('div','noclass'+(brk?' vac':'')); nc.textContent=brk?('방학'+(brk.name?' · '+brk.name:'')):'수업 없음'; day.appendChild(nc); calEl.appendChild(day); continue; }
 
     const dayItems=periods.flatMap(p=>p.units);
     const allDone = dayItems.length>0 && dayItems.every(u=>checked[u.id]);
@@ -1001,6 +1029,7 @@ function renderLock(){
     b.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>관리자';
     $('#settingsBtn').style.display='inline-flex';
     $('#tmplBtn').style.display='inline-flex';
+    $('#vacBtn').style.display='inline-flex';
     $('#clubsBtn').style.display='inline-flex';
     $('#sideBtn').style.display='inline-flex';
     $('#viewSeg').style.display='inline-flex';
@@ -1011,6 +1040,7 @@ function renderLock(){
     b.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>조회 전용';
     $('#settingsBtn').style.display='none';
     $('#tmplBtn').style.display='none';
+    $('#vacBtn').style.display='none';
     $('#clubsBtn').style.display='none';
     $('#sideBtn').style.display='none';
     $('#viewSeg').style.display='none';
@@ -1263,7 +1293,8 @@ function renderDaily(){
   const _ow=body.querySelector('.daily-wrap'); const _sx=_ow?_ow.scrollLeft:0, _sy=_ow?_ow.scrollTop:0;  // 스크롤 유지
   const periods=(new Date(y,m-1,d).getDay()>=1 && new Date(y,m-1,d).getDay()<=5) ? buildDay(iso) : null;
   if(!periods || !periods.length){
-    body.innerHTML='<div class="dempty">이 날은 시간표(수업)가 없습니다. 화살표나 달력으로 다른 날을 선택하세요.</div>';
+    const brk=inBreak(iso);
+    body.innerHTML='<div class="dempty">'+(brk?('🏖 방학입니다'+(brk.name?' ('+esc(brk.name)+')':'')+'. 등교일이면 🏖 방학 메뉴에서 등교일로 지정하세요.'):'이 날은 시간표(수업)가 없습니다. 화살표나 달력으로 다른 날을 선택하세요.')+'</div>';
     $('#barFill').style.width='0%'; $('#pctLabel').textContent='0 / 0'; return;
   }
   const pers=periods.slice().sort((a,b)=>a.p-b.p);
@@ -1400,6 +1431,41 @@ $('#subSave').onclick=()=>{
   if(db){ const payload={}; for(const r of $('#subRows').querySelectorAll('.subrow')){ const id=r.dataset.uid; if(!id)continue; const v=r.querySelector('input').value.trim(); payload[id]= v?v:deleteField(); }
     setDoc(doc(db,'attendance_boards',boardKey),{subs:payload},{merge:true}).catch(e=>{console.error('subSave',e);toast('저장 실패 — 인터넷/설정 확인',null,true);}); }
   subOv.classList.remove('show'); toast(n?'보강 저장됨':'변경 없음');
+};
+
+/* ===== 방학 · 등교일 ===== */
+const vacOv=$('#vacOv');
+function vacRangeEl(b){ b=b||{}; const r=el('div','vacrow');
+  r.innerHTML=`<input type="text" class="v-name" placeholder="이름(예: 여름방학)" value="${esc(b.name||'')}"><input type="date" class="v-from" value="${esc(b.from||'')}"><span class="vtil">~</span><input type="date" class="v-to" value="${esc(b.to||'')}"><button class="vdel" title="삭제">✕</button>`;
+  r.querySelector('.vdel').onclick=()=>r.remove(); return r;
+}
+function vacDayEl(iso){ const r=el('div','vacrow');
+  r.innerHTML=`<input type="date" class="v-day" value="${esc(iso||'')}"><span class="vtil" style="font-size:12px">등교일 (그날 시간표대로)</span><button class="vdel" title="삭제">✕</button>`;
+  r.querySelector('.vdel').onclick=()=>r.remove(); return r;
+}
+function openVac(){
+  if(!admin){ toast('관리자만 편집할 수 있어요'); return; }
+  const rr=$('#vacRanges'); rr.innerHTML=''; (breaks.length?breaks:[null]).forEach(b=>rr.appendChild(vacRangeEl(b)));
+  const dd=$('#vacDays'); dd.innerHTML=''; (schoolDays.length?schoolDays:[]).slice().sort().forEach(d=>dd.appendChild(vacDayEl(d)));
+  vacOv.classList.add('show');
+}
+$('#vacBtn').onclick=openVac;
+$('#vacAddRange').onclick=()=>$('#vacRanges').appendChild(vacRangeEl(null));
+$('#vacAddDay').onclick=()=>$('#vacDays').appendChild(vacDayEl(''));
+$('#vacCancel').onclick=()=>vacOv.classList.remove('show');
+vacOv.addEventListener('click',e=>{ if(e.target===vacOv) vacOv.classList.remove('show'); });
+$('#vacSave').onclick=()=>{
+  const nb=[];
+  for(const r of $('#vacRanges').querySelectorAll('.vacrow')){
+    const from=r.querySelector('.v-from').value, to=r.querySelector('.v-to').value, name=r.querySelector('.v-name').value.trim();
+    if(!from||!to) continue;
+    nb.push({from, to:(to<from?from:to), name});
+  }
+  const nd=[]; for(const r of $('#vacDays').querySelectorAll('.vacrow')){ const v=r.querySelector('.v-day').value; if(v && !nd.includes(v)) nd.push(v); }
+  breaks=nb; schoolDays=nd; saveCache(); render();
+  try{ if(db) setDoc(doc(db,'attendance_boards',boardKey),{breaks:nb, schoolDays:nd},{merge:true}).catch(e=>{console.error('vacSave',e);toast('저장 실패 — 인터넷/설정 확인',null,true);}); }
+  catch(e){ console.error(e); }
+  vacOv.classList.remove('show'); toast('방학·등교일 저장됨');
 };
 
 /* 시작 */
