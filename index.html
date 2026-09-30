@@ -246,6 +246,8 @@
   .dcell:hover:not(.na):not(.done){background:var(--accent-weak)}
   .dempty{padding:44px 18px; text-align:center; color:var(--ink-2); font-size:14px; background:var(--surface); border:1px solid var(--line); border-radius:12px}
   .dhint{font-size:12px; color:var(--ink-2); margin:9px 2px 0}
+  .ddone{display:none; align-items:center; gap:3px; color:var(--done); font-weight:800; font-size:14px; margin-left:3px}
+  .ddone.show{display:inline-flex}
   .dcell.subd::after{content:'보강'; font-size:8px; font-weight:800; color:#fff; background:var(--warn); border-radius:4px; padding:0 3px; margin-left:3px; vertical-align:middle; text-decoration:none; display:inline-block}
   .name.subd::after{content:'보강'; font-size:8px; font-weight:800; color:#fff; background:var(--warn); border-radius:4px; padding:0 3px; margin-left:3px; vertical-align:middle}
   .subrow{display:grid; grid-template-columns:64px 1fr 14px 1fr; gap:8px; align-items:center; margin-bottom:8px; padding:8px 9px; background:var(--surface-2); border:1px solid var(--line-2); border-radius:9px}
@@ -328,6 +330,7 @@
       <button class="navbtn" id="dNextM" title="다음 달">»</button>
       <input type="date" id="dDate">
       <button class="today-btn" id="dToday">오늘</button>
+      <span class="ddone" id="dDoneBadge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6 9 17l-5-5"/></svg>출결마감</span>
       <button class="rosterbtn" id="subBtn" style="margin-left:auto">🔁 보강</button>
       <button class="rosterbtn" id="rosterBtn" style="margin-left:0">📋 명단·과목</button>
     </div>
@@ -1290,6 +1293,7 @@ function renderDaily(){
   $('#dDate').value=iso;
   const sd=studentData();
   const body=$('#dailyBody');
+  $('#dDoneBadge').classList.remove('show');   // 기본 숨김 (완료 시 아래에서 표시)
   const _ow=body.querySelector('.daily-wrap'); const _sx=_ow?_ow.scrollLeft:0, _sy=_ow?_ow.scrollTop:0;  // 스크롤 유지
   const periods=(new Date(y,m-1,d).getDay()>=1 && new Date(y,m-1,d).getDay()<=5) ? buildDay(iso) : null;
   if(!periods || !periods.length){
@@ -1325,6 +1329,7 @@ function renderDaily(){
   body.innerHTML=html;
   const _nw=body.querySelector('.daily-wrap'); if(_nw){ _nw.scrollLeft=_sx; _nw.scrollTop=_sy; }  // 스크롤 복원
   const arr=[...unitset], dn=arr.filter(id=>checked[id]).length;
+  $('#dDoneBadge').classList.toggle('show', arr.length>0 && dn===arr.length);   // 그날 전원 완료 → 출결마감
   $('#barFill').style.width=arr.length?(dn/arr.length*100)+'%':'0%';
   $('#pctLabel').textContent=`${dn} / ${arr.length}`;
   body.querySelectorAll('.dcell').forEach(td=>{
